@@ -1,0 +1,6 @@
+# Ignore archive folder (legacy code)
+archive/
+build/
+dist/
+node_modules/
+coverage/

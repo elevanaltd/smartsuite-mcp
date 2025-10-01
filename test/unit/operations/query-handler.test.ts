@@ -5,6 +5,7 @@
 // TDD Phase: RED → GREEN (minimal implementation to pass tests)
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
 import type { SmartSuiteClient } from '../../../src/smartsuite-client.js';
 
 describe('QueryHandler', () => {

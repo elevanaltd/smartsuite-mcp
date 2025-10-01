@@ -62,7 +62,7 @@ export class SchemaHandler {
       if (error instanceof Error) {
         throw error;
       }
-      throw new Error('Failed to retrieve schema: ' + String(error));
+      throw new Error(`Failed to retrieve schema: ${String(error)}`);
     }
 
     // Validate schema format

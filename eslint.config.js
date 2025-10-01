@@ -184,9 +184,10 @@ export default [
     },
   },
 
-  // Global ignores
+  // Global ignores (migrated from .eslintignore)
   {
     ignores: [
+      'archive/', // Legacy code
       'build/',
       'dist/',
       'node_modules/',

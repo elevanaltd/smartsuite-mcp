@@ -315,7 +315,7 @@ describe('SmartSuiteClient - Authentication (AUTH-001, AUTH-002)', () => {
       // Assert - Second call should be the listRecords call
       expect(mockFetch).toHaveBeenCalledTimes(2);
       const listRecordsCall = mockFetch.mock.calls[1];
-      if (!listRecordsCall || !listRecordsCall[0]) {
+      if (!listRecordsCall?.[0]) {
         throw new Error('Test setup failed: listRecords call not found');
       }
       expect(listRecordsCall[0]).toContain('/api/v1/applications/app-123/records');
@@ -351,7 +351,7 @@ describe('SmartSuiteClient - Authentication (AUTH-001, AUTH-002)', () => {
 
       // Assert - Check second call (listRecords)
       const secondCall = mockFetch.mock.calls[1];
-      if (!secondCall || !secondCall[1] || !secondCall[1].headers) {
+      if (!secondCall?.[1]?.headers) {
         throw new Error('Test setup failed: request headers not found');
       }
       const headers = secondCall[1].headers as Record<string, string>;
@@ -432,7 +432,7 @@ describe('SmartSuiteClient - Authentication (AUTH-001, AUTH-002)', () => {
 
       // Assert - Check request body
       const secondCall = mockFetch.mock.calls[1];
-      if (!secondCall || !secondCall[1] || typeof secondCall[1].body !== 'string') {
+      if (!secondCall?.[1] || typeof secondCall[1].body !== 'string') {
         throw new Error('Test setup failed: request body not found');
       }
       const requestBody = JSON.parse(secondCall[1].body);
@@ -471,7 +471,7 @@ describe('SmartSuiteClient - Authentication (AUTH-001, AUTH-002)', () => {
       // Assert
       expect(mockFetch).toHaveBeenCalledTimes(2);
       const createCall = mockFetch.mock.calls[1];
-      if (!createCall || !createCall[0] || !createCall[1]) {
+      if (!createCall?.[0] || !createCall[1]) {
         throw new Error('Test setup failed: createRecord call not found');
       }
       expect(createCall[0]).toContain('/api/v1/applications/app-123/records/');
@@ -512,7 +512,7 @@ describe('SmartSuiteClient - Authentication (AUTH-001, AUTH-002)', () => {
 
       // Assert
       const createCall = mockFetch.mock.calls[1];
-      if (!createCall || !createCall[1] || typeof createCall[1].body !== 'string') {
+      if (!createCall?.[1] || typeof createCall[1].body !== 'string') {
         throw new Error('Test setup failed: request body not found');
       }
       const requestBody = JSON.parse(createCall[1].body);
@@ -550,7 +550,7 @@ describe('SmartSuiteClient - Authentication (AUTH-001, AUTH-002)', () => {
 
       // Assert
       const updateCall = mockFetch.mock.calls[1];
-      if (!updateCall || !updateCall[0] || !updateCall[1]) {
+      if (!updateCall?.[0] || !updateCall[1]) {
         throw new Error('Test setup failed: updateRecord call not found');
       }
       expect(updateCall[0]).toContain('/api/v1/applications/app-123/records/rec-123/');
@@ -588,7 +588,7 @@ describe('SmartSuiteClient - Authentication (AUTH-001, AUTH-002)', () => {
 
       // Assert
       const deleteCall = mockFetch.mock.calls[1];
-      if (!deleteCall || !deleteCall[0] || !deleteCall[1]) {
+      if (!deleteCall?.[0] || !deleteCall[1]) {
         throw new Error('Test setup failed: deleteRecord call not found');
       }
       expect(deleteCall[0]).toContain('/api/v1/applications/app-123/records/rec-123/');
@@ -744,7 +744,7 @@ describe('SmartSuiteClient - Authentication (AUTH-001, AUTH-002)', () => {
 
       // Assert
       const customCall = mockFetch.mock.calls[1];
-      if (!customCall || !customCall[0] || !customCall[1]) {
+      if (!customCall?.[0] || !customCall[1]) {
         throw new Error('Test setup failed: custom request call not found');
       }
       expect(customCall[0]).toContain('/api/v1/custom/endpoint');
@@ -780,7 +780,7 @@ describe('SmartSuiteClient - Authentication (AUTH-001, AUTH-002)', () => {
 
       // Assert
       const paginationCall = mockFetch.mock.calls[1];
-      if (!paginationCall || !paginationCall[1] || typeof paginationCall[1].body !== 'string') {
+      if (!paginationCall?.[1] || typeof paginationCall[1].body !== 'string') {
         throw new Error('Test setup failed: pagination request body not found');
       }
       const requestBody = JSON.parse(paginationCall[1].body);
@@ -819,7 +819,7 @@ describe('SmartSuiteClient - Authentication (AUTH-001, AUTH-002)', () => {
 
       // Assert
       const sortCall = mockFetch.mock.calls[1];
-      if (!sortCall || !sortCall[1] || typeof sortCall[1].body !== 'string') {
+      if (!sortCall?.[1] || typeof sortCall[1].body !== 'string') {
         throw new Error('Test setup failed: sort request body not found');
       }
       const requestBody = JSON.parse(sortCall[1].body);
@@ -857,7 +857,7 @@ describe('SmartSuiteClient - Authentication (AUTH-001, AUTH-002)', () => {
 
       // Assert
       const filterCall = mockFetch.mock.calls[1];
-      if (!filterCall || !filterCall[1] || typeof filterCall[1].body !== 'string') {
+      if (!filterCall?.[1] || typeof filterCall[1].body !== 'string') {
         throw new Error('Test setup failed: filter request body not found');
       }
       const requestBody = JSON.parse(filterCall[1].body);

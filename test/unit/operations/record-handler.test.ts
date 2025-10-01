@@ -118,9 +118,7 @@ describe('RecordHandler', () => {
       // Assert - Should detect format error
       expect(result).toHaveProperty('validated', false);
       expect(result).toHaveProperty('errors');
-      expect(result.errors).toContain(
-        expect.stringMatching(/SmartDoc|rich text|format/i),
-      );
+      expect(Array.isArray(result.errors) && result.errors.some((e: string) => /SmartDoc|rich text|format/i.test(e))).toBe(true);
     });
 
     it('should validate linked records are arrays', async () => {
@@ -160,9 +158,7 @@ describe('RecordHandler', () => {
       // Assert - Should detect format error
       expect(result).toHaveProperty('validated', false);
       expect(result).toHaveProperty('errors');
-      expect(result.errors).toContain(
-        expect.stringMatching(/array|linked record/i),
-      );
+      expect(Array.isArray(result.errors) && result.errors.some((e: string) => /array|linked record/i.test(e))).toBe(true);
     });
   });
 

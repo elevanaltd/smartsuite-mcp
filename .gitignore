@@ -171,3 +171,7 @@ config/field-mappings/*.yml
 .claude-desktop-configured
 .claude-code-configured
 _legacy_tests/
+
+# Phoenix migration archives
+archive/
+.git.old-staging-archive/

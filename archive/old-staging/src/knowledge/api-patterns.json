@@ -1,0 +1,703 @@
+{
+  "_approval_token": "SYSTEM-STEWARD-20250910-eb2e7e29",
+  "_knowledge_version": "Updated 2025-09-10: Added table/field creation patterns from EAV documentation",
+  "CRITICAL_FILTER_KNOWLEDGE": {
+    "LINKED_RECORD_FIELDS": {
+      "description": "CRITICAL: Linked record fields require special comparison operators",
+      "MUST_USE": ["has_any_of", "has_all_of", "has_none_of"],
+      "NEVER_USE": ["is", "contains", "equals"],
+      "example_correct": {
+        "field": "projects_link",
+        "comparison": "has_any_of",
+        "value": ["project_id"]
+      },
+      "common_fields": ["projects_link", "assigned_to", "batch_alloc", "parent_task", "linked_records"],
+      "production_examples": {
+        "record_creation": {
+          "projects_link": ["68acac24271c120f1c9f1f01"]
+        },
+        "record_update": {
+          "assigned_to": ["user_id_1", "user_id_2"],
+          "parent_task": ["parent_task_id"]
+        },
+        "filter_by_project": {
+          "field": "projects_link",
+          "comparison": "has_any_of", 
+          "value": ["68acac24271c120f1c9f1f01"]
+        }
+      }
+    },
+    "FILTER_STRUCTURE": {
+      "CRITICAL": "Use 'fields' array inside filter, NOT 'conditions'",
+      "correct": {
+        "filter": {
+          "operator": "and",
+          "fields": [{"field": "x", "comparison": "y", "value": "z"}]
+        }
+      }
+    }
+  },
+
+  "STATUS_FIELD_FORMATS": {
+    "description": "Status/select fields accept multiple formats",
+    "simple_format": {
+      "status": "option_code",
+      "priority": "high"
+    },
+    "value_object_format": {
+      "main_status": {"value": "PEND START"},
+      "priority": {"value": "Normal"}
+    },
+    "production_note": "Both formats work - API normalizes internally",
+    "recommendation": "Use simple format unless UI requires value objects"
+  },
+  
+  "LIST_RECORDS": {
+    "endpoint": "/api/v1/applications/{appId}/records/list/",
+    "method": "POST",
+    "description": "Retrieve records with filtering and pagination",
+    "required_headers": {
+      "Authorization": "Token {api_key}",
+      "Account-Id": "{workspace_id}",
+      "Content-Type": "application/json"
+    },
+    "safe_defaults": {
+      "limit": 2,
+      "offset": 0,
+      "hydrated": false
+    },
+    "body_structure": {
+      "limit": "number (max 1000, recommend 2 for MCP)",
+      "offset": "number (pagination start)",
+      "filter": "object (field conditions)",
+      "sort": "array (field ordering)",
+      "hydrated": "boolean (include relationships)"
+    },
+    "token_warning": "Each record can be 10-25K tokens - use limit:2 for MCP",
+    "common_errors": [
+      "Using GET instead of POST",
+      "Missing trailing slash",
+      "Limit too high causing token explosion"
+    ]
+  },
+
+  "GET_RECORD": {
+    "endpoint": "/api/v1/applications/{appId}/records/{recordId}/",
+    "method": "GET",
+    "description": "Retrieve single record by ID",
+    "required_headers": {
+      "Authorization": "Token {api_key}",
+      "ACCOUNT-ID": "{workspace_id}"
+    },
+    "critical": "Must include trailing slash",
+    "response": "Single record object with all fields"
+  },
+
+  "CREATE_RECORD": {
+    "endpoint": "/api/v1/applications/{appId}/records/",
+    "method": "POST",
+    "description": "Create new record",
+    "required_headers": {
+      "Authorization": "Token {api_key}",
+      "Account-Id": "{workspace_id}",
+      "Content-Type": "application/json"
+    },
+    "body_requirements": {
+      "required_fields": "Check schema - varies by table",
+      "linked_records": "Must be arrays, not strings",
+      "select_fields": "Use option codes, not labels"
+    },
+    "validation": "Run smartsuite_schema first to check requirements"
+  },
+
+  "UPDATE_RECORD": {
+    "endpoint": "/api/v1/applications/{appId}/records/{recordId}/",
+    "method": "PATCH",
+    "description": "Update existing record",
+    "required_headers": {
+      "Authorization": "Token {api_key}",
+      "Account-Id": "{workspace_id}",
+      "Content-Type": "application/json"
+    },
+    "body_notes": {
+      "partial_updates": "Only send fields to change",
+      "linked_records": "Arrays required",
+      "status_fields": "Use option codes"
+    },
+    "critical": "Trailing slash required"
+  },
+
+  "DELETE_RECORD": {
+    "endpoint": "/api/v1/applications/{appId}/records/{recordId}/",
+    "method": "DELETE",
+    "description": "Delete single record",
+    "required_headers": {
+      "Authorization": "Token {api_key}",
+      "ACCOUNT-ID": "{workspace_id}"
+    },
+    "critical": "MUST have trailing slash or silent failure",
+    "warning": "No undo - permanent deletion"
+  },
+
+  "BULK_CREATE": {
+    "endpoint": "/api/v1/applications/{appId}/records/bulk/",
+    "method": "POST",
+    "description": "Create multiple records",
+    "body_structure": {
+      "items": "array of record objects (max 25)"
+    },
+    "limits": {
+      "max_records": 25,
+      "recommendation": "Batch in groups of 20 for safety"
+    }
+  },
+
+  "BULK_UPDATE": {
+    "endpoint": "/api/v1/applications/{appId}/records/bulk/",
+    "method": "PATCH",
+    "description": "Update multiple records",
+    "body_structure": {
+      "items": "array of {id, ...updates} (max 25)"
+    },
+    "limits": {
+      "max_records": 25
+    },
+    "requirement": "Each item must include 'id' field"
+  },
+
+  "BULK_DELETE": {
+    "endpoint": "/api/v1/applications/{appId}/records/bulk_delete/",
+    "method": "PATCH",
+    "description": "Delete multiple records",
+    "body_structure": {
+      "items": "array of record IDs (max 25)"
+    },
+    "limits": {
+      "max_records": 25
+    },
+    "warning": "Permanent deletion - no undo"
+  },
+
+  "GET_SCHEMA": {
+    "endpoint": "/api/v1/applications/{appId}/",
+    "method": "GET",
+    "description": "Get table structure and field definitions",
+    "required_headers": {
+      "Authorization": "Token {api_key}",
+      "ACCOUNT-ID": "{workspace_id}"
+    },
+    "response_includes": {
+      "structure": "Array of field definitions",
+      "name": "Table name",
+      "id": "Table ID",
+      "solution": "Parent solution ID"
+    },
+    "note": "No '/schema' or '/structure' sub-endpoint - just the app ID"
+  },
+
+  "LIST_APPLICATIONS": {
+    "endpoint": "/api/v1/applications/",
+    "method": "GET",
+    "description": "List all tables/applications in workspace",
+    "required_headers": {
+      "Authorization": "Token {api_key}",
+      "ACCOUNT-ID": "{workspace_id}"
+    },
+    "query_params": {
+      "solution": "Filter by solution ID"
+    },
+    "useful_for": "Table discovery and ID verification"
+  },
+
+  "CHANGE_FIELD": {
+    "endpoint": "/api/v1/applications/{appId}/change_field/",
+    "method": "PUT",
+    "description": "Modify existing field structure - WORKING",
+    "status": "WORKING",
+    "required_headers": {
+      "Authorization": "Token {api_key}",
+      "ACCOUNT-ID": "{workspace_id}",
+      "Content-Type": "application/json"
+    },
+    "body_structure": {
+      "slug": "field_slug_to_update",
+      "label": "New Field Name",
+      "field_type": "field_type_identifier",
+      "params": {
+        "...updated_field_specific_params": "Varies by field_type"
+      }
+    },
+    "working_example": {
+      "slug": "task_code",
+      "label": "Task Code Updated",
+      "field_type": "singleselectfield",
+      "params": {
+        "display_format": "importance",
+        "control_type": "dropdown",
+        "choices": [
+          {"label": "01-Setup", "value": "01_setup", "value_color": "#DC2626"}
+        ]
+      }
+    },
+    "critical_note": "For status/select fields, use 'choices' not 'options' to preserve UUIDs"
+  },
+
+  "ADD_FIELD": {
+    "endpoint": "/api/v1/applications/{appId}/add_field/",
+    "method": "POST",
+    "description": "Add single field to table - WORKING",
+    "status": "WORKING",
+    "critical_requirement": "field_position.prev_sibling_slug must be empty string '' for first position OR existing field slug from table structure",
+    "required_headers": {
+      "Authorization": "Token {api_key}",
+      "ACCOUNT-ID": "{workspace_id}",
+      "Content-Type": "application/json"
+    },
+    "body_structure": {
+      "field": {
+        "slug": "10-char-alphanumeric (e.g., 'test1234ab')",
+        "label": "Display name",
+        "field_type": "Type identifier (e.g., 'textfield')",
+        "params": {
+          "help_text": "Optional help text",
+          "...field_specific_params": "Varies by field_type"
+        },
+        "is_new": true
+      },
+      "field_position": {
+        "prev_sibling_slug": "existing_field_slug_OR_empty_string_for_first_position"
+      },
+      "auto_fill_structure_layout": true
+    },
+    "working_example": {
+      "endpoint": "/applications/68ab34b30b1e05e11a8ba87f/add_field/",
+      "payload": {
+        "field": {
+          "slug": "test5678cd",
+          "label": "Test Field Via MCP",
+          "field_type": "textfield",
+          "params": {
+            "help_text": "Created via intelligent tool"
+          },
+          "is_new": true
+        },
+        "field_position": {
+          "prev_sibling_slug": "select012z"
+        },
+        "auto_fill_structure_layout": true
+      }
+    },
+    "common_errors": [
+      "Using null for prev_sibling_slug - returns 'This field may not be null'",
+      "Referencing non-existent field slug - returns 400 Bad Request", 
+      "Omitting field_position - returns 'This field is required'",
+      "Wrong slug format - must be alphanumeric"
+    ],
+    "position_notes": [
+      "Empty string '' = add field at beginning",
+      "Valid field slug = add field after that field",
+      "Field must already exist in table structure"
+    ]
+  },
+
+  "BULK_ADD_FIELDS": {
+    "endpoint": "/api/v1/applications/{appId}/bulk-add-fields/",
+    "method": "POST",
+    "description": "Add multiple fields to table - WORKS FOR SINGLE FIELDS TOO",
+    "status": "WORKING",
+    "required_headers": {
+      "Authorization": "Token {api_key}",
+      "ACCOUNT-ID": "{workspace_id}",
+      "Content-Type": "application/json"
+    },
+    "body_structure": {
+      "fields": [
+        {
+          "slug": "10-char-alphanumeric (e.g., 'test123456')",
+          "label": "Display name",
+          "field_type": "Type identifier (e.g., 'textfield', 'numberfield', 'datefield')",
+          "params": {
+            "help_text": "Optional help text",
+            "required": false,
+            "unique": false,
+            "...field_specific_params": "Varies by field_type"
+          },
+          "is_new": true
+        }
+      ],
+      "set_as_visible_fields_in_reports": []
+    },
+    "field_types": {
+      "textfield": {
+        "params": {
+          "help_text": "string",
+          "display_format": "importance",
+          "required": "boolean",
+          "unique": "boolean",
+          "max_length": "number"
+        }
+      },
+      "numberfield": {
+        "params": {
+          "decimal_places": "number",
+          "allow_negative": "boolean",
+          "thousands_separator": "boolean"
+        }
+      },
+      "currencyfield": {
+        "params": {
+          "currency": "USD|GBP|EUR",
+          "decimal_places": "number"
+        }
+      },
+      "datefield": {
+        "params": {
+          "include_time": "boolean",
+          "date_format": "MM/dd/yyyy"
+        }
+      },
+      "singleselectfield": {
+        "params": {
+          "options": [
+            {"value": "option_code", "label": "Display Label", "color": "#hex"}
+          ],
+          "required": "boolean"
+        }
+      },
+      "statusfield": {
+        "params": {
+          "options": [
+            {"value": "status_code", "label": "Status Label", "color": "#hex"}
+          ]
+        }
+      },
+      "checkboxfield": {
+        "params": {
+          "default_value": "boolean"
+        }
+      },
+      "linkedrecordfield": {
+        "params": {
+          "linked_app_id": "target_table_id",
+          "multiple": "boolean",
+          "required": "boolean"
+        }
+      },
+      "userfield": {
+        "params": {
+          "multiple": "boolean",
+          "required": "boolean",
+          "restrict_to_workspace_members": "boolean"
+        }
+      },
+      "textareafield": {
+        "params": {
+          "help_text": "string"
+        }
+      },
+      "emailfield": {
+        "params": {
+          "allow_multiple": "boolean"
+        }
+      },
+      "linkfield": {
+        "params": {
+          "allow_multiple": "boolean"
+        }
+      },
+      "phonefield": {
+        "params": {
+          "allow_multiple": "boolean"
+        }
+      },
+      "addressfield": {
+        "params": {
+          "show_map": "boolean"
+        }
+      },
+      "fullnamefield": {
+        "params": {
+          "custom_titles": "array of strings"
+        }
+      },
+      "percentfield": {
+        "params": {
+          "decimal_places": "number"
+        }
+      },
+      "ratingfield": {
+        "params": {
+          "max_rating": "number",
+          "rating_style": "stars|thumbs|numbers"
+        }
+      },
+      "daterangefield": {
+        "params": {
+          "include_time": "boolean"
+        }
+      },
+      "timefield": {
+        "params": {
+          "time_format": "12_hour|24_hour"
+        }
+      },
+      "durationfield": {
+        "params": {
+          "display_format": "hours_minutes|minutes_seconds"
+        }
+      },
+      "multipleselectfield": {
+        "params": {
+          "options": [
+            {"value": "option_code", "label": "Display Label", "color": "#hex"}
+          ]
+        }
+      },
+      "tagsfield": {
+        "params": {
+          "is_private": "boolean",
+          "allow_new_tags": "boolean"
+        }
+      },
+      "richtextareafield": {
+        "params": {
+          "allow_attachments": "boolean"
+        }
+      },
+      "lookupfield": {
+        "params": {
+          "linked_field_id": "linked_record_field_id",
+          "lookup_field_id": "target_field_id"
+        }
+      },
+      "ipaddressfield": {
+        "params": {
+          "allow_multiple": "boolean"
+        }
+      },
+      "numbersliderfield": {
+        "params": {
+          "min_value": "number",
+          "max_value": "number",
+          "increment": "number",
+          "default_value": "number"
+        }
+      },
+      "percentcompletefield": {
+        "params": {
+          "increment": "number",
+          "default_value": "number"
+        }
+      },
+      "duedatefield": {
+        "params": {
+          "linked_status_field": "status_field_slug"
+        }
+      },
+      "socialnetworkfield": {
+        "params": {
+          "platforms": "array of platform names"
+        },
+        "note": "Cannot be created via bulk-add-fields, use add_field endpoint"
+      }
+    },
+    "limits": {
+      "max_fields_per_request": "Unknown - tested with 2 successfully",
+      "slug_requirements": "10 character alphanumeric, must be unique"
+    },
+    "bulk_unsupported_fields": [
+      "timetrackingfield",
+      "checklistfield", 
+      "socialnetworkfield",
+      "votefield",
+      "countfield",
+      "filefield",
+      "signaturefield",
+      "formulafield",
+      "rollupfield",
+      "subitemsfield",
+      "buttonfield"
+    ],
+    "bulk_unsupported_note": "These field types can only be created via individual /add_field/ endpoint",
+    "success_example": {
+      "endpoint": "/applications/6613bedd1889d8deeaef8b0e/bulk-add-fields/",
+      "payload": {
+        "fields": [
+          {
+            "slug": "arch789012",
+            "label": "Test Bulk Single",
+            "field_type": "textfield",
+            "params": {"help_text": "Testing bulk with single field"},
+            "is_new": true
+          }
+        ]
+      }
+    }
+  },
+
+  "DELETE_FIELD": {
+    "endpoint": "/api/v1/applications/{appId}/delete_field/",
+    "method": "POST",
+    "description": "Delete field from table",
+    "status": "UNTESTED",
+    "body_structure": {
+      "slug": "field_slug_to_delete"
+    },
+    "warning": "Permanent deletion - field data will be lost"
+  },
+
+  "COUNT_RECORDS": {
+    "endpoint": "/api/v1/applications/{appId}/records/list/",
+    "method": "POST",
+    "description": "Count records matching filter",
+    "body_structure": {
+      "count_only": true,
+      "filter": "object (optional conditions)"
+    },
+    "response": {
+      "count": "Total matching records"
+    },
+    "efficiency": "Returns count without record data"
+  },
+
+  "SEARCH_RECORDS": {
+    "endpoint": "/api/v1/applications/{appId}/records/search/",
+    "method": "POST",
+    "description": "Text search across records",
+    "body_structure": {
+      "query": "Search text",
+      "fields": "Array of field slugs to search (optional)"
+    },
+    "note": "Different from filter - uses text matching"
+  },
+
+  "CREATE_TABLE": {
+    "endpoint": "/api/v1/applications/",
+    "method": "POST",
+    "description": "Create new table with initial field structure - WORKING",
+    "status": "WORKING",
+    "required_headers": {
+      "Authorization": "Token {api_key}",
+      "ACCOUNT-ID": "{workspace_id}",
+      "Content-Type": "application/json"
+    },
+    "body_structure": {
+      "name": "Table display name (required)",
+      "solution": "Solution ID where table will be created (required)",
+      "description": "Table description (optional)",
+      "structure": "Array of initial field definitions (required)"
+    },
+    "field_structure_requirements": {
+      "slug": "unique_field_identifier (10-char alphanumeric)",
+      "label": "Display Name",
+      "field_type": "field_type_name",
+      "params": "Field-specific parameters object"
+    },
+    "working_example": {
+      "endpoint": "/applications/",
+      "payload": {
+        "name": "Test Table via MCP",
+        "solution": "68b6d66b33630eb365ae54cb",
+        "description": "Created via intelligent tool",
+        "structure": [
+          {
+            "slug": "title",
+            "label": "Item Title",
+            "field_type": "textfield",
+            "params": {
+              "primary": true,
+              "required": true,
+              "unique": true
+            }
+          }
+        ]
+      }
+    },
+    "response": "Complete created table object with generated ID and metadata",
+    "common_errors": [
+      "Missing required solution ID",
+      "Empty structure array",
+      "Invalid field_type identifiers",
+      "Duplicate field slugs"
+    ]
+  },
+
+  "WEBHOOKS": {
+    "create": "/api/v1/applications/{appId}/webhooks/",
+    "list": "/api/v1/applications/{appId}/webhooks/",
+    "delete": "/api/v1/applications/{appId}/webhooks/{webhookId}/",
+    "status": "AVAILABLE",
+    "note": "Not implemented in current MCP tools"
+  },
+
+  "AUTOMATIONS": {
+    "endpoint": "/api/v1/applications/{appId}/automations/",
+    "status": "AVAILABLE",
+    "note": "Complex setup - not in current implementation"
+  },
+
+  "FILES": {
+    "upload": "/api/v1/applications/{appId}/records/{recordId}/files/",
+    "method": "POST",
+    "content_type": "multipart/form-data",
+    "status": "AVAILABLE",
+    "note": "Requires different content handling"
+  },
+
+  "COMMENTS": {
+    "add": "/api/v1/applications/{appId}/records/{recordId}/comments/",
+    "list": "/api/v1/applications/{appId}/records/{recordId}/comments/",
+    "method": "POST/GET",
+    "status": "AVAILABLE"
+  },
+
+  "ACTIVITY_LOG": {
+    "endpoint": "/api/v1/applications/{appId}/records/{recordId}/activity/",
+    "method": "GET",
+    "description": "Get record change history",
+    "status": "AVAILABLE"
+  },
+
+  "SOLUTIONS": {
+    "list": "/api/v1/solutions/",
+    "get": "/api/v1/solutions/{solutionId}/",
+    "create": "/api/v1/solutions/",
+    "method": "GET/POST",
+    "description": "Manage solution containers",
+    "status": "AVAILABLE"
+  },
+
+  "MEMBERS": {
+    "list": "/api/v1/members/",
+    "invite": "/api/v1/members/invite/",
+    "method": "GET/POST",
+    "description": "Workspace member management",
+    "status": "AVAILABLE"
+  },
+
+  "RATE_LIMITS": {
+    "requests_per_second": 4,
+    "recommended_delay": 250,
+    "burst_limit": 10,
+    "429_backoff": 30000,
+    "retry_strategy": {
+      "max_retries": 3,
+      "backoff_multiplier": 2,
+      "max_delay": 60000
+    }
+  },
+
+  "RESPONSE_STRUCTURE": {
+    "list_response": {
+      "total": "Total records matching filter",
+      "offset": "Current pagination offset",
+      "limit": "Records per page",
+      "items": "Array of record objects"
+    },
+    "error_response": {
+      "error": "Error message",
+      "details": "Additional context (optional)",
+      "field_errors": "Field-specific errors (optional)"
+    }
+  }
+}

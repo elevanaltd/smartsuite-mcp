@@ -1,0 +1,132 @@
+# Test Configuration for EAV Planning Template
+# This validates the structure and logic of eav-planning-template.yaml
+
+test_metadata:
+  description: "Test cases for EAV planning template configuration"
+  version: "1.0"
+  
+# Test Cases for Configuration Validation
+test_cases:
+  
+  # Test 1: Basic YAML structure validation
+  structure_validation:
+    description: "Verify all required sections exist"
+    expected_sections:
+      - "metadata"
+      - "scheduling"
+      - "project_tasks"
+      - "video_tasks" 
+      - "special_tasks"
+      - "calculation_rules"
+      - "dependencies"
+      - "smartsuite_mapping"
+      - "variants"
+      - "status_workflow"
+      - "business_rules"
+    test_type: "structure"
+    
+  # Test 2: Duration calculation validation
+  duration_calculations:
+    description: "Test duration formulas work correctly"
+    test_scenarios:
+      - input: {new_vids: 3, amend_vids: 2, reuse_vids: 1}
+        expected_p9_filming: 1  # ROUNDUP(0.15 * 5, 0) = 1
+        expected_v8_edit: 9     # ROUNDUP(1.75 * 5, 0.5) = 9
+      - input: {new_vids: 10, amend_vids: 5, reuse_vids: 0}
+        expected_p9_filming: 3  # ROUNDUP(0.15 * 15, 0) = 3  
+        expected_v8_edit: 27    # ROUNDUP(1.75 * 15, 0.5) = 27
+    test_type: "formula"
+    
+  # Test 3: Business day calculation validation
+  business_day_logic:
+    description: "Verify business day scheduling works"
+    test_scenarios:
+      - start_date: "2025-01-06"  # Monday
+        duration: 5
+        expected_due: "2025-01-10"  # Friday
+      - start_date: "2025-01-10"  # Friday  
+        duration: 3
+        expected_due: "2025-01-14"  # Tuesday (skip weekend)
+    test_type: "scheduling"
+    
+  # Test 4: Dependency chain validation
+  dependency_validation:
+    description: "Verify dependency chains are valid"
+    expected_chains:
+      - task: "v2_script_creation"
+        depends_on: ["p8_specs", "v1_manuals_if_required"]
+      - task: "p9_filming" 
+        depends_on: ["p2_booking_shoot", "v5_scenes_complete"]
+      - task: "v8_video_edit"
+        depends_on: ["v8_video_edit_quoting_approved"]
+    test_type: "dependencies"
+    
+  # Test 5: Batch allocation logic
+  batch_allocation_validation:
+    description: "Verify batch allocation rules"
+    test_scenarios:
+      - task: "v2_script_creation"
+        video_types: ["new", "amend"] 
+        expected_batch_count: 1  # Single batch for all new+amend
+      - task: "v9_video_review_reuse"
+        video_types: ["reuse"]
+        expected_batch_count: 1  # Single batch for all reuse
+    test_type: "batch_logic"
+    
+  # Test 6: Conditional task validation
+  conditional_logic:
+    description: "Verify conditional tasks work correctly"
+    test_scenarios:
+      - condition: "user_manual_checkbox = true"
+        expected_tasks: ["v1_manuals"]
+      - condition: "user_manual_checkbox = false"
+        expected_tasks: []  # V1 task not created
+    test_type: "conditional"
+    
+  # Test 7: Reuse workflow validation  
+  reuse_workflow_validation:
+    description: "Verify reuse workflow logic"
+    expected_behavior:
+      timing: "day_3_to_5"
+      auto_approve: 7
+      outcomes:
+        approved: "skip_to_delivery"
+        changes_needed: "manual_conversion_to_main_workflow"
+    test_type: "workflow"
+
+# Expected Outputs for Integration Testing
+expected_outputs:
+  sample_project:
+    input:
+      new_videos: 3
+      amend_videos: 2  
+      reuse_videos: 1
+      project_due_date: "2025-02-28"
+      user_manual_videos: 2
+      
+    expected_tasks_created:
+      project_level: 12  # P1, P2x2, P3, P4, P5, P6, P8, P9, P10, P11, P12
+      video_level: 10    # V1, V2, V3x2, V5, V6, V7, V8x2, V9x2 (for new+amend)
+      special: 1         # V9 reuse review
+      total: 23
+      
+    expected_timeline:
+      earliest_start: "project_start_date"  
+      latest_finish: "2025-02-28"  # P11 matches project due
+      invoicing_due: "2025-03-07"  # P12 = project due + 7 business days
+
+# Validation Rules
+validation_rules:
+  required_fields:
+    all_tasks: ["name", "duration", "level", "dependencies", "description"]
+    project_tasks: ["duration_type"]
+    video_tasks: ["batch_allocate"]
+    
+  valid_durations:
+    min: 0.5  # Half day minimum
+    max: 30   # One month maximum
+    
+  valid_dependencies:
+    - must_reference_existing_tasks: true
+    - circular_dependency_check: true
+    - cross_stream_validation: true

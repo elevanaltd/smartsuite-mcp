@@ -1,0 +1,391 @@
+{
+  "_approval_token": "CRITICAL-ENGINEER-20250911-66d6831c",
+  "_metadata": {
+    "description": "Agent guidance patterns to prevent recurring SmartSuite query mistakes",
+    "version": "1.0.0",
+    "created": "2025-09-11",
+    "author": "implementation-lead",
+    "architecture_note": "Separated from api-patterns.json following critical-engineer recommendations to decouple declarative API specs from imperative agent guidance",
+    "future_enhancement": "Semantic search with vector embeddings recommended to replace lexical trigger phrases"
+  },
+  "_schema_validation": {
+    "required_fields": ["trigger_phrases", "mandatory_workflow", "prevention_message"],
+    "optional_fields": ["working_example", "common_mistakes", "anti_patterns"],
+    "metadata_required": ["version", "status", "last_updated"]
+  },
+
+  "PROJECT_VIDEO_FILTERING_PATTERN": {
+    "version": "1.0",
+    "status": "active", 
+    "last_updated": "2025-09-11",
+    "author": "implementation-lead",
+    "trigger_phrases": [
+      "get videos for project",
+      "filter videos by project", 
+      "videos related to project",
+      "project videos",
+      "videos for specific project",
+      "filter by project link",
+      "query project videos"
+    ],
+    "intent_summary": "Filter video records by project relationship using linked record fields",
+    "mandatory_workflow": {
+      "step1": "ALWAYS use smartsuite_discover with scope='fields' and tableId='{video_table_id}'",
+      "step2": "Identify the EXACT field name for project relationships (likely 'projects_link' NOT 'project')",
+      "step3": "Use correct linked record filter syntax with discovered field name"
+    },
+    "correct_filter_syntax": {
+      "field": "projects_link",
+      "comparison": "has_any_of",
+      "value": ["project_record_id"]
+    },
+    "common_mistakes": [
+      "Guessing field name as 'project' instead of using discovery",
+      "Using wrong filter syntax like 'is' or 'equals' for linked records",
+      "Not using array format for linked record values",
+      "Skipping discovery and making assumptions"
+    ],
+    "working_example": {
+      "description": "Get all videos linked to a specific project",
+      "discovery_call": {
+        "tool": "smartsuite_discover",
+        "params": {
+          "scope": "fields",
+          "tableId": "videos_table_id"
+        }
+      },
+      "filter_call": {
+        "tool": "smartsuite_query", 
+        "params": {
+          "operation": "list",
+          "appId": "videos_table_id",
+          "filters": {
+            "operator": "and",
+            "fields": [
+              {
+                "field": "projects_link",
+                "comparison": "has_any_of",
+                "value": ["68acac24271c120f1c9f1f01"]
+              }
+            ]
+          },
+          "limit": 5
+        }
+      }
+    },
+    "prevention_message": "STOP: Before filtering by project relationships, use smartsuite_discover to get the correct field names. Never guess 'project' - it's usually 'projects_link' or similar.",
+    "negative_matches": [
+      "filter out project videos",
+      "exclude project content",
+      "remove project filter"
+    ]
+  },
+
+  "DISCOVERY_FIRST_WORKFLOW_PATTERN": {
+    "version": "1.0",
+    "status": "active",
+    "last_updated": "2025-09-11", 
+    "author": "implementation-lead",
+    "trigger_phrases": [
+      "filter by linked record",
+      "query related records", 
+      "filter by relationship",
+      "linked field filter",
+      "associated records",
+      "records connected to",
+      "filter by foreign key"
+    ],
+    "intent_summary": "Query records using linked record relationships with proper discovery workflow",
+    "mandatory_workflow": {
+      "rule": "NEVER attempt to filter linked records without discovery first",
+      "step1": "smartsuite_discover with scope='fields' to get field structure",
+      "step2": "Identify linked record field names (usually end with '_link')", 
+      "step3": "Use proper linked record filter syntax with discovered field names"
+    },
+    "linked_record_field_patterns": {
+      "common_suffixes": ["_link", "_links", "_id", "_ids"],
+      "examples": ["projects_link", "assigned_to", "parent_task", "batch_alloc"],
+      "never_guess": "Field names like 'project', 'user', 'task' are usually wrong"
+    },
+    "required_filter_syntax": {
+      "linked_single": {
+        "field": "discovered_field_name",
+        "comparison": "has_any_of",
+        "value": ["record_id"]
+      },
+      "linked_multiple": {
+        "field": "discovered_field_name", 
+        "comparison": "has_all_of",
+        "value": ["record_id_1", "record_id_2"]
+      }
+    },
+    "anti_patterns": [
+      "Using 'is', 'equals', 'contains' for linked records - WRONG",
+      "Guessing field names without discovery - WRONG", 
+      "Using string values instead of arrays - WRONG"
+    ],
+    "prevention_message": "DISCOVERY REQUIRED: All linked record operations must start with smartsuite_discover to identify correct field names and relationships.",
+    "negative_matches": [
+      "skip discovery",
+      "bypass field lookup",
+      "direct field access"
+    ]
+  },
+
+  "FILTER_SYNTAX_DISAMBIGUATION_PATTERN": {
+    "version": "1.0",
+    "status": "active",
+    "last_updated": "2025-09-11",
+    "author": "implementation-lead", 
+    "trigger_phrases": [
+      "Bad Request on filter",
+      "filter not working",
+      "400 error on query",
+      "filter syntax error",
+      "invalid filter format"
+    ],
+    "intent_summary": "Resolve filter syntax differences between smartsuite_query and smartsuite_intelligent tools",
+    "root_cause": "Different filter syntax between smartsuite_query tool and smartsuite_intelligent tool",
+    "syntax_differences": {
+      "smartsuite_query_tool": {
+        "correct": {
+          "filters": {
+            "operator": "and",
+            "fields": [
+              {"field": "status", "comparison": "is", "value": "active"}
+            ]
+          }
+        },
+        "note": "Uses 'filters' key at root level"
+      },
+      "smartsuite_intelligent_tool": {
+        "correct": {
+          "filter": {
+            "operator": "and", 
+            "fields": [
+              {"field": "status", "comparison": "is", "value": "active"}
+            ]
+          }
+        },
+        "note": "Uses 'filter' key (singular) at root level"
+      }
+    },
+    "diagnostic_questions": [
+      "Which tool are you using - smartsuite_query or smartsuite_intelligent?",
+      "Are you using 'filters' (plural) or 'filter' (singular) in your payload?",
+      "Did you use discovery to verify field names exist?"
+    ],
+    "quick_fixes": {
+      "for_query_tool": "Change 'filter' to 'filters' in root payload",
+      "for_intelligent_tool": "Change 'filters' to 'filter' in root payload", 
+      "for_both": "Verify field names exist via smartsuite_discover first"
+    },
+    "prevention_message": "SYNTAX CHECK: smartsuite_query uses 'filters' (plural), smartsuite_intelligent uses 'filter' (singular). Always verify field names with discovery first.",
+    "negative_matches": [
+      "successful filter",
+      "filter working correctly",
+      "200 response"
+    ]
+  },
+
+  "LINKED_RECORD_QUERY_BEST_PRACTICES": {
+    "version": "1.0", 
+    "status": "active",
+    "last_updated": "2025-09-11",
+    "author": "implementation-lead",
+    "trigger_phrases": [
+      "query linked records",
+      "filter by relationship", 
+      "associated records",
+      "related data query",
+      "foreign key filter",
+      "join-like query"
+    ],
+    "intent_summary": "Best practices for querying records using linked record relationships",
+    "best_practices_checklist": [
+      "1. DISCOVER: Use smartsuite_discover to get field structure",
+      "2. IDENTIFY: Find linked record fields (usually _link suffix)",
+      "3. VERIFY: Confirm field exists and is type 'linkedrecordfield'",
+      "4. FILTER: Use has_any_of/has_all_of/has_none_of operators only",
+      "5. FORMAT: Always use array values, even for single IDs"
+    ],
+    "linked_record_operators": {
+      "has_any_of": "Record has any of the specified linked records",
+      "has_all_of": "Record has all of the specified linked records", 
+      "has_none_of": "Record has none of the specified linked records"
+    },
+    "never_use_operators": [
+      "is", "equals", "contains", "not_contains", "starts_with", "ends_with"
+    ],
+    "array_syntax_examples": {
+      "single_link": {
+        "field": "projects_link",
+        "comparison": "has_any_of",
+        "value": ["68acac24271c120f1c9f1f01"]
+      },
+      "multiple_links": {
+        "field": "assigned_to",
+        "comparison": "has_all_of", 
+        "value": ["user_id_1", "user_id_2"]
+      },
+      "exclusion": {
+        "field": "parent_task",
+        "comparison": "has_none_of",
+        "value": ["excluded_task_id"]
+      }
+    },
+    "common_field_name_patterns": {
+      "projects": "projects_link",
+      "users": "assigned_to", 
+      "tasks": "parent_task",
+      "batches": "batch_alloc",
+      "categories": "category_link"
+    },
+    "prevention_message": "LINKED RECORDS: Always use discovery, linked record operators (has_any_of), and array values. Never guess field names.",
+    "negative_matches": [
+      "simple field query",
+      "non-relationship filter",
+      "text field search"
+    ]
+  },
+
+  "FIELD_NAME_GUESSING_PREVENTION": {
+    "version": "1.0",
+    "status": "active", 
+    "last_updated": "2025-09-11",
+    "author": "implementation-lead",
+    "trigger_phrases": [
+      "field not found",
+      "unknown field",
+      "field does not exist",
+      "invalid field name",
+      "field name error"
+    ],
+    "intent_summary": "Prevent agents from guessing field names instead of using discovery system",
+    "root_cause": "Agents guess field names instead of using discovery system",
+    "mandatory_discovery_workflow": {
+      "step1": {
+        "tool": "smartsuite_discover",
+        "params": {"scope": "tables"},
+        "purpose": "Get list of available tables and their IDs"
+      },
+      "step2": {
+        "tool": "smartsuite_discover", 
+        "params": {"scope": "fields", "tableId": "discovered_table_id"},
+        "purpose": "Get exact field names and types for target table"
+      },
+      "step3": "Use EXACT field names from discovery in queries"
+    },
+    "common_guessing_mistakes": [
+      "Assuming 'project' field exists (usually 'projects_link')",
+      "Assuming 'user' field exists (usually 'assigned_to')",
+      "Assuming 'status' field exists (check actual field slug)",
+      "Using display names instead of field slugs"
+    ],
+    "field_name_reality_check": {
+      "display_vs_slug": "Display names shown in UI ≠ field slugs used in API",
+      "discovery_shows": "Field slug, field type, and field parameters",
+      "api_requires": "Exact field slug, not display name"
+    },
+    "never_guess_examples": {
+      "wrong": "Assuming field 'project' exists",
+      "right": "Use smartsuite_discover to find 'projects_link'",
+      "wrong": "Assuming field 'description' exists", 
+      "right": "Discovery might show 'task_description' or 'desc_text'"
+    },
+    "prevention_message": "NEVER GUESS FIELD NAMES: Always use smartsuite_discover to get exact field slugs. Display names ≠ API field names.",
+    "negative_matches": [
+      "field exists",
+      "correct field name", 
+      "successful field query"
+    ]
+  },
+
+  "DEBUGGING_CYCLE_PREVENTION": {
+    "version": "1.0",
+    "status": "active",
+    "last_updated": "2025-09-11", 
+    "author": "implementation-lead",
+    "trigger_phrases": [
+      "try again",
+      "different approach",
+      "let me fix that",
+      "error occurred",
+      "not working"
+    ],
+    "intent_summary": "Break inefficient debugging cycles by enforcing discovery-first workflow",
+    "common_debugging_cycles": [
+      "1. Agent guesses field name → 2. Gets error → 3. Guesses different name → 4. Repeat",
+      "1. Agent uses wrong filter → 2. Gets 400 error → 3. Tries different filter → 4. Repeat",
+      "1. Agent skips discovery → 2. Gets field error → 3. Finally uses discovery → 4. Success"
+    ],
+    "break_the_cycle": {
+      "rule": "DISCOVERY FIRST, QUESTIONS SECOND, IMPLEMENTATION THIRD",
+      "step1_discover": "Always start with smartsuite_discover to understand structure",
+      "step2_plan": "Plan the exact API call using discovered field names",
+      "step3_execute": "Execute with confidence using verified field names"
+    },
+    "stop_guessing_checklist": [
+      "Did I use smartsuite_discover to get field structure?",
+      "Am I using exact field slugs from discovery?",
+      "Am I using correct filter syntax for the tool I'm using?", 
+      "Am I using linked record operators for linked fields?"
+    ],
+    "efficiency_gain": {
+      "old_way": "Guess → Error → Guess → Error → Discovery → Success (5+ round trips)",
+      "new_way": "Discovery → Plan → Execute → Success (2 round trips)"
+    },
+    "prevention_message": "BREAK THE CYCLE: Start every SmartSuite operation with discovery. Stop guessing, start knowing.",
+    "negative_matches": [
+      "successful first attempt",
+      "correct implementation",
+      "working as expected"
+    ]
+  },
+
+  "INTELLIGENT_TOOL_GUIDANCE": {
+    "version": "1.0",
+    "status": "active",
+    "last_updated": "2025-09-11",
+    "author": "implementation-lead",
+    "trigger_phrases": [
+      "how to use smartsuite", 
+      "smartsuite best practices",
+      "which tool should I use",
+      "smartsuite guidance"
+    ],
+    "intent_summary": "Guide agents on when to use smartsuite_intelligent vs smartsuite_query tools",
+    "when_to_use_intelligent_tool": [
+      "When you need step-by-step guidance for complex operations",
+      "When you're unsure about API syntax or structure", 
+      "When you want to learn about available operations",
+      "When you need to understand SmartSuite concepts"
+    ],
+    "intelligent_tool_advantages": [
+      "Provides contextual guidance based on knowledge base",
+      "Shows working examples for common operations",
+      "Explains SmartSuite concepts and relationships",
+      "Safer for learning and exploration"
+    ],
+    "query_tool_advantages": [
+      "Direct API execution without guidance overhead",
+      "Faster for operations when you know exact syntax",
+      "Better for bulk operations and automation"
+    ],
+    "when_to_switch_tools": {
+      "use_intelligent_first": "For discovery, learning, and complex operations",
+      "switch_to_query": "Once you understand the operation and need speed"
+    },
+    "example_intelligent_queries": [
+      "How do I filter videos by project in SmartSuite?",
+      "What's the correct way to create records with linked fields?",
+      "Show me how to update status fields safely"
+    ],
+    "prevention_message": "USE INTELLIGENT TOOL: For learning and complex operations, use smartsuite_intelligent for guidance before switching to smartsuite_query for execution.",
+    "negative_matches": [
+      "direct API call",
+      "bulk operation",
+      "simple CRUD"
+    ]
+  }
+}

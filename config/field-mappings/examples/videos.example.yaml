@@ -1,0 +1,82 @@
+# SmartSuite Videos Table Field Mappings
+# SOLUTION 2: EAV Operations (68a8eedc2271ce265ebdae8f)
+# TABLE: Videos (68b2437a8f1755b055e0a124)
+# Last Audit: 2025-09-07
+
+tableName: videos
+tableId: 68b2437a8f1755b055e0a124
+solutionId: 68a8eedc2271ce265ebdae8f
+
+# Field mappings (human name → actual API slug)  
+fields:
+  # Core Video Fields
+  title: title                           # Video Title - Record Title
+  autoNumber: autonumber                 # Auto Number
+  videoName: video_name                  # Video Name - Text Field
+  description: description               # Description - Rich Text Area
+  
+  # Status Fields
+  mainStreamStatus: main_status          # Main Stream Status - Status Field
+  voStreamStatus: vo_status              # VO Stream Status - Status Field
+  priority: priority                     # Priority - Single Select
+  
+  # Project Relationships
+  project: projects_link                 # Project - Linked Record to Projects table
+  projectCode: s16f0c5a34               # Project Code - Lookup from Project
+  
+  # Video Properties
+  targetDuration: target_duration        # Target Duration - Number (seconds)
+  sequence: video_seq01                  # Sequence - Number
+  
+  # Assignment
+  assignedTo: assignedto1               # Assigned To - User Field
+  
+  # Equipment Information
+  make: make1field                      # Make - Text Field
+  model: model2fld1                     # Model - Text Field
+  
+  # Video Categorization
+  videoType: vidtype123                  # Video Type - Single Select
+  productionType: prodtype01             # Production Type - Single Select
+  
+  # Timeline
+  dueDate: duedate123                   # Due Date - Date Field
+  
+  # System Fields
+  firstCreated: first_created           # First Created - Created Time
+  lastUpdated: last_updated             # Last Updated - Updated Time
+  followedBy: followed_by               # Followed by - User Field
+  openComments: comments_count          # Open Comments - Comments Count
+
+# Status Field Options
+mainStreamStatusOptions:
+  - PEND START
+  - PEND USER MANUAL
+  - PEND SCRIPT
+  - SCRIPT IN REVIEW
+  - PEND SCRIPT REWORK
+  - PEND SCENES
+  - SCENES PLANNED
+  - PEND FILMING
+  - PEND INGESTION
+  - MEDIA READY
+  - IN EDIT PREP
+  - IN EDIT
+  - INTERNAL REVIEW
+  - VIDEO REWORK
+  - VIDEO IN REVIEW
+  - VIDEO APPROVED
+  - IN DELIVERY
+  - DELIVERED
+
+voStreamStatusOptions:
+  - PEND SCRIPT APPROVAL
+  - PEND VO
+  - VO READY
+  - VO DELIVERED
+
+priorityOptions:
+  - Urgent
+  - High
+  - Normal
+  - Low

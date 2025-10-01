@@ -1,0 +1,228 @@
+{
+  "UUID_CORRUPTION": {
+    "pattern": "/change_field.*status|singleselectfield",
+    "trigger": "payload.options",
+    "error": "All status UUIDs permanently lost - records show empty status",
+    "prevention": "Use 'choices' parameter not 'options' to preserve UUIDs",
+    "severity": "CRITICAL",
+    "real_incident": "EAV Sept 2025 - emergency restoration required",
+    "example": {
+      "wrong": {
+        "method": "PUT",
+        "endpoint": "/applications/{tableId}/change_field/",
+        "payload": { "options": ["New Option"] }
+      },
+      "correct": {
+        "method": "PUT",
+        "endpoint": "/applications/{tableId}/change_field/",
+        "payload": { "choices": [{"value": "existing_uuid", "label": "New Label"}] }
+      }
+    }
+  },
+
+  "WRONG_LIST_METHOD": {
+    "pattern": "GET.*/records$|GET.*/records/list",
+    "error": "404 Not Found - endpoint doesn't exist for GET",
+    "prevention": "Use POST /applications/{id}/records/list/ with body",
+    "severity": "HIGH",
+    "frequency": "Daily occurrence in logs",
+    "example": {
+      "wrong": {
+        "method": "GET",
+        "endpoint": "/applications/{appId}/records"
+      },
+      "correct": {
+        "method": "POST",
+        "endpoint": "/applications/{appId}/records/list/",
+        "body": { "limit": 100, "offset": 0 }
+      }
+    }
+  },
+
+  "TOKEN_EXPLOSION": {
+    "pattern": "list.*without limit|limit.*>.*3|smartsuite_query.*limit.*>.*3",
+    "error": "MCP response exceeds 25000 token limit",
+    "prevention": "Always use limit:2 maximum for MCP operations",
+    "severity": "HIGH",
+    "real_example": "52051 tokens from just 5 records",
+    "safe_limits": {
+      "mcp_context": 2,
+      "api_direct": 25,
+      "pagination": 100
+    }
+  },
+
+  "MISSING_TRAILING_SLASH": {
+    "pattern": "DELETE.*/records/[^/]+$|PUT.*/records/[^/]+$",
+    "error": "301 redirect or silent failure - operation appears successful but doesn't work",
+    "prevention": "Always include trailing slash on DELETE and PUT endpoints",
+    "severity": "HIGH",
+    "affected_endpoints": [
+      "/records/{recordId}/",
+      "/applications/{appId}/",
+      "/records/list/"
+    ]
+  },
+
+  "WRONG_FIELD_VALUES": {
+    "pattern": "singleselectfield.*label|statusfield.*label",
+    "error": "Field validation fails - 'value not in choices'",
+    "prevention": "Use option codes (e.g., 'Xcb82') not display labels (e.g., 'Establishing')",
+    "severity": "HIGH",
+    "example": {
+      "wrong": { "status": "In Progress" },
+      "correct": { "status": "in_progress" }
+    }
+  },
+
+  "LINKED_RECORD_FORMAT": {
+    "pattern": "linkedrecordfield.*string",
+    "error": "Type error - linked records must be arrays",
+    "prevention": "Always use array format for linked records, even single values",
+    "severity": "HIGH",
+    "example": {
+      "wrong": { "project_id": "68a8ff5237fde0bf797c05b3" },
+      "correct": { "project_id": ["68a8ff5237fde0bf797c05b3"] }
+    }
+  },
+
+  "ENV_PARSE_ERROR": {
+    "pattern": "\\.env.*parse error|parse error near.*&",
+    "error": "Environment file parsing fails - usually unescaped & character",
+    "prevention": "Quote values containing special characters in .env file",
+    "severity": "MEDIUM",
+    "common_cause": "Unescaped & in database URLs or API keys"
+  },
+
+  "AUTH_HEADER_FORMAT": {
+    "pattern": "401.*unauthorized|Invalid token",
+    "error": "Authentication fails - wrong header format",
+    "prevention": "Use 'Token {api_key}' not 'Bearer {api_key}' for Authorization",
+    "severity": "HIGH",
+    "correct_headers": {
+      "Authorization": "Token {api_key}",
+      "ACCOUNT-ID": "{workspace_id}",
+      "Content-Type": "application/json"
+    }
+  },
+
+  "BULK_LIMIT_EXCEEDED": {
+    "pattern": "bulk.*>.*25|records.*length.*>.*25",
+    "error": "Bulk operation fails - exceeds SmartSuite 25 record limit",
+    "prevention": "Chunk bulk operations into batches of 25 or fewer",
+    "severity": "HIGH",
+    "api_limits": {
+      "bulk_create": 25,
+      "bulk_update": 25,
+      "bulk_delete": 25
+    }
+  },
+
+  "RATE_LIMIT_429": {
+    "pattern": "429.*rate.*limit|Too Many Requests",
+    "error": "API rate limit exceeded - requests blocked",
+    "prevention": "Implement 30-second backoff for 429, 250ms between requests",
+    "severity": "HIGH",
+    "retry_strategy": {
+      "429_backoff": 30000,
+      "between_requests": 250,
+      "max_retries": 3
+    }
+  },
+
+  "FIELD_UPDATE_BROKEN": {
+    "pattern": "/change_field/|/add_field/",
+    "error": "Returns 200 OK but field doesn't actually update",
+    "prevention": "Use SmartSuite UI for field modifications - API endpoint broken",
+    "severity": "HIGH",
+    "known_issue_date": "2025-06-06",
+    "workaround": "Manual UI updates only"
+  },
+
+  "WRONG_SCHEMA_ENDPOINT": {
+    "pattern": "/structure|/schema",
+    "error": "404 - these endpoints don't exist",
+    "prevention": "Use GET /applications/{appId}/ for schema (no sub-endpoint)",
+    "severity": "MEDIUM",
+    "correct_endpoint": "/api/v1/applications/{appId}/"
+  },
+
+  "JQ_SYNTAX_ERROR": {
+    "pattern": "jq.*syntax error|unexpected INVALID_CHARACTER",
+    "error": "Shell command fails - jq parsing error",
+    "prevention": "Escape special characters: ! as \\!, proper quote handling",
+    "severity": "MEDIUM",
+    "common_fixes": {
+      "exclamation": "\\!",
+      "quotes": "Use single quotes around jq expressions"
+    }
+  },
+
+  "RICH_TEXT_FORMAT": {
+    "pattern": "richtextareafield.*string",
+    "error": "Rich text fields require SmartDoc structure, not plain strings",
+    "prevention": "Use proper SmartDoc format with data/html/preview structure",
+    "severity": "MEDIUM",
+    "required_structure": {
+      "data": { "type": "doc", "content": [] },
+      "html": "<p>content</p>",
+      "preview": "plain text content"
+    }
+  },
+
+  "TABLE_ID_MISMATCH": {
+    "pattern": "table.*not found|application.*not found",
+    "error": "Operations fail - using wrong or outdated table IDs",
+    "prevention": "Always verify table IDs before operations, check solution membership",
+    "severity": "HIGH",
+    "validation": "Use smartsuite_discover tool to verify table exists"
+  },
+
+  "FIELD_SLUG_MISMATCH": {
+    "pattern": "field.*not found|unknown field",
+    "error": "Field operations fail - slug doesn't match actual field",
+    "prevention": "Use field mapping files or schema inspection to verify slugs",
+    "severity": "MEDIUM",
+    "common_mismatches": {
+      "work1stream": "workflow_stream (documented)",
+      "task2level": "task_level (documented)",
+      "work3stage": "workflow_stage (documented)"
+    }
+  },
+
+  "MISSING_REQUIRED_FIELDS": {
+    "pattern": "required field.*missing|validation.*required",
+    "error": "Record creation/update fails - missing required fields",
+    "prevention": "Check schema for required fields before submission",
+    "severity": "MEDIUM",
+    "validation": "Use smartsuite_schema to identify required fields"
+  },
+
+  "PAGINATION_INCOMPLETE": {
+    "pattern": "only.*first.*100|missing.*records",
+    "error": "Not all records retrieved - pagination not implemented",
+    "prevention": "Loop with offset/limit until items.length < limit",
+    "severity": "MEDIUM",
+    "pagination_pattern": {
+      "limit": 100,
+      "offset": 0,
+      "loop_until": "response.items.length < limit"
+    }
+  },
+
+  "BASE_URL_WRONG": {
+    "pattern": "api\\.smartsuite\\.com|DNS.*error",
+    "error": "Wrong base URL - api.smartsuite.com doesn't exist",
+    "prevention": "Use https://app.smartsuite.com (not api)",
+    "severity": "HIGH",
+    "correct_base": "https://app.smartsuite.com"
+  },
+
+  "NO_RETRY_LOGIC": {
+    "pattern": "500.*Internal Server|502.*Bad Gateway|503.*Service",
+    "error": "Transient failures not retried - operations fail unnecessarily",
+    "prevention": "Implement exponential backoff for 5xx errors",
+    "severity": "MEDIUM",
+    "retry_codes": [500, 502, 503, 504]
+  }
+}

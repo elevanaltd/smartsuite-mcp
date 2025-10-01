@@ -1,0 +1,60 @@
+# SmartSuite Content Items Table Field Mappings
+# SOLUTION 2: EAV Operations (68a8eedc2271ce265ebdae8f)
+# TABLE 8: Content Items (68a8ffc3a38c8a5a547c05b6)
+
+tableName: content-items
+tableId: 68a8ffc3a38c8a5a547c05b6
+solutionId: 68a8eedc2271ce265ebdae8f
+
+# Field mappings (human name → actual API slug)
+fields:
+  # Core Content Fields
+  contentId: autonumber                  # Content ID - Autonumber (CI001, CI002...)
+  title: title                           # Content Title - Record Title
+  contentType: content_type              # Content Type - Single Select
+  
+  # Project Relationships
+  project: project_id                    # Project - Linked Record
+  projectCode: project_code              # Project Code - Lookup
+  relatedVideo: video_id                 # Related Video - Linked Record
+  
+  # Hierarchy
+  parentContent: parent_content          # Parent Content - Linked Record (same table)
+  orderNumber: order_number              # Order Number - Number
+  
+  # Status & Workflow
+  status: status                         # Status - Single Select
+  
+  # Content
+  contentBody: content_body              # Content Body - Rich Text
+  technicalNotes: technical_notes        # Technical Notes - Text Area
+  durationTarget: duration_target        # Duration Target - Number (seconds)
+  
+  # Assignment & Workflow
+  assignedWriter: assigned_writer        # Assigned Writer - Members
+  versionNumber: version                 # Version Number - Number
+  approvalDate: approval_date            # Approval Date
+  
+  # Feedback & Notes
+  clientFeedback: client_feedback        # Client Feedback - Rich Text
+  internalNotes: internal_notes          # Internal Notes - Rich Text
+  
+  # Attachments & Links
+  attachments: attachments               # Attachments - File
+  relatedTasks: related_tasks            # Related Tasks - Linked Record
+
+# Content Type Options
+contentTypeOptions:
+  - Script
+  - Scene
+  - Shot
+  - Voice Over
+  - Asset
+
+# Content Status Options
+statusOptions:
+  - Draft
+  - Internal Review
+  - Client Review
+  - Approved
+  - Changes Needed

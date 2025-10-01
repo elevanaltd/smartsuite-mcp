@@ -1,0 +1,600 @@
+{
+  "_approval_token": "SYSTEM-STEWARD-20250910-eb2e7e29",
+
+  "create_table_with_basic_structure": {
+    "name": "Create Table with Initial Field Structure",
+    "description": "Create new SmartSuite table with essential fields - WORKING pattern",
+    "danger_level": "YELLOW",
+    "template": {
+      "step1_plan": {
+        "purpose": "Define table structure and required fields",
+        "requirements": ["Solution ID", "Table name", "Primary field definition"]
+      },
+      "step2_create": {
+        "method": "POST",
+        "endpoint": "/api/v1/applications/",
+        "body": {
+          "name": "Table Display Name",
+          "solution": "solution_id_required",
+          "description": "Optional table description",
+          "structure": [
+            {
+              "slug": "title",
+              "label": "Primary Field Label",
+              "field_type": "textfield",
+              "params": {
+                "primary": true,
+                "required": true,
+                "unique": true
+              }
+            }
+          ]
+        }
+      }
+    },
+    "working_example": {
+      "name": "Video Assets Table",
+      "solution": "68b6d66b33630eb365ae54cb",
+      "structure": [
+        {
+          "slug": "title",
+          "label": "Asset Title", 
+          "field_type": "textfield",
+          "params": {"primary": true, "required": true}
+        },
+        {
+          "slug": "asset_type",
+          "label": "Asset Type",
+          "field_type": "singleselectfield",
+          "params": {
+            "options": [
+              {"value": "raw_footage", "label": "Raw Footage", "color": "#e74c3c"},
+              {"value": "edited_clip", "label": "Edited Clip", "color": "#3498db"}
+            ]
+          }
+        }
+      ]
+    },
+    "success_response": "Complete table object with generated ID",
+    "validation": {
+      "required_fields": ["name", "solution", "structure"],
+      "structure_minimum": "At least one field with primary: true"
+    }
+  },
+
+  "safe_status_update": {
+    "name": "Update Status Field Labels Safely",
+    "description": "Change status field display labels without losing UUID data",
+    "danger_level": "RED",
+    "prerequisites": [
+      "Fetch current field structure first",
+      "Preserve ALL existing choice UUIDs",
+      "Only modify labels, never values"
+    ],
+    "template": {
+      "step1_fetch": {
+        "method": "GET",
+        "endpoint": "/api/v1/applications/{tableId}/",
+        "purpose": "Get current field structure with existing choices"
+      },
+      "step2_update": {
+        "method": "PUT",
+        "endpoint": "/api/v1/applications/{tableId}/change_field/",
+        "body": {
+          "slug": "{field_slug}",
+          "field_type": "singleselectfield",
+          "params": {
+            "choices": [
+              {
+                "value": "EXISTING_UUID_DO_NOT_CHANGE",
+                "label": "New Display Label",
+                "color": "#FF5733"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "critical_warning": "NEVER use 'options' parameter - it destroys all UUIDs",
+    "recovery": "If UUIDs lost, manual restoration required for all records"
+  },
+
+  "safe_bulk_update": {
+    "name": "Bulk Update Records Safely",
+    "description": "Update multiple records with proper batching and validation",
+    "danger_level": "YELLOW",
+    "template": {
+      "method": "PATCH",
+      "endpoint": "/api/v1/applications/{tableId}/records/bulk/",
+      "body": {
+        "items": [
+          {
+            "id": "record_id_1",
+            "field_slug": "new_value"
+          }
+        ]
+      },
+      "validation": {
+        "max_items": 25,
+        "required_field": "id in each item",
+        "linked_records": "Must be arrays"
+      }
+    },
+    "batching_strategy": {
+      "chunk_size": 20,
+      "delay_between": 250,
+      "retry_on_partial": true
+    }
+  },
+
+  "safe_record_creation": {
+    "name": "Create Record with Required Fields",
+    "description": "Create new record ensuring all required fields are included",
+    "danger_level": "GREEN",
+    "template": {
+      "step1_schema": {
+        "method": "GET",
+        "endpoint": "/api/v1/applications/{tableId}/",
+        "purpose": "Identify required fields (params.required === true)"
+      },
+      "step2_create": {
+        "method": "POST",
+        "endpoint": "/api/v1/applications/{tableId}/records/",
+        "body": {
+          "required_field_1": "value",
+          "required_field_2": ["linked_record_id"],
+          "optional_field": "value"
+        }
+      }
+    },
+    "common_requirements": {
+      "linked_records": "Always use arrays",
+      "select_fields": "Use option codes not labels",
+      "rich_text": "SmartDoc structure required"
+    }
+  },
+
+  "safe_list_with_pagination": {
+    "name": "List Records with Proper Pagination",
+    "description": "Retrieve all records without token explosion",
+    "danger_level": "GREEN",
+    "template": {
+      "method": "POST",
+      "endpoint": "/api/v1/applications/{tableId}/records/list/",
+      "body": {
+        "limit": 2,
+        "offset": 0,
+        "hydrated": false
+      },
+      "pagination_loop": {
+        "pseudocode": [
+          "let offset = 0",
+          "const limit = 2 // For MCP context",
+          "do {",
+          "  response = fetch with {limit, offset}",
+          "  records.push(...response.items)",
+          "  offset += limit",
+          "} while (response.items.length === limit)"
+        ]
+      }
+    },
+    "token_management": {
+      "mcp_safe_limit": 2,
+      "api_direct_limit": 100,
+      "warning": "Each record can be 10-25K tokens"
+    }
+  },
+
+  "safe_record_deletion": {
+    "name": "Delete Record with Confirmation",
+    "description": "Safely delete record with proper validation",
+    "danger_level": "RED",
+    "prerequisites": [
+      "Verify record ID is correct",
+      "Check for dependent records",
+      "Consider soft delete alternative",
+      "Ensure backup exists"
+    ],
+    "template": {
+      "step1_verify": {
+        "method": "GET",
+        "endpoint": "/api/v1/applications/{tableId}/records/{recordId}/",
+        "purpose": "Confirm correct record before deletion"
+      },
+      "step2_delete": {
+        "method": "DELETE",
+        "endpoint": "/api/v1/applications/{tableId}/records/{recordId}/",
+        "critical": "MUST include trailing slash",
+        "confirmation_required": true
+      }
+    },
+    "warning": "Deletion is permanent - no undo available"
+  },
+
+  "filtered_record_query": {
+    "name": "Query Records with Complex Filters",
+    "description": "Retrieve specific records using field filters",
+    "danger_level": "GREEN",
+    "CRITICAL_UPDATE": "Filter structure corrected - use 'fields' array and proper comparisons",
+    "template": {
+      "method": "POST",
+      "endpoint": "/api/v1/applications/{tableId}/records/list/",
+      "body": {
+        "limit": 2,
+        "filter": {
+          "operator": "and",
+          "fields": [
+            {
+              "field": "status",
+              "comparison": "is",
+              "value": "active"
+            },
+            {
+              "field": "priority",
+              "comparison": "is_any_of",
+              "value": ["high", "urgent"]
+            }
+          ]
+        },
+        "sort": [
+          {
+            "field": "due_date",
+            "direction": "asc"
+          }
+        ]
+      }
+    },
+    "filter_comparison_operators": {
+      "text_fields": ["is", "is_not", "contains", "not_contains", "is_empty", "is_not_empty"],
+      "linked_records": ["has_any_of", "has_all_of", "has_none_of", "is_empty", "is_not_empty"],
+      "select_fields": ["is", "is_not", "is_any_of", "is_none_of"],
+      "number_fields": ["is", "is_not", "greater_than", "less_than", "between", "not_between"],
+      "CRITICAL": "Linked records MUST use has_any_of/has_all_of, NOT is/contains"
+    }
+  },
+
+  "CRITICAL_linked_record_filters": {
+    "name": "CRITICAL: Filter by Linked Records",
+    "description": "Correct way to filter records by linked record fields",
+    "danger_level": "RED if done wrong",
+    "WRONG_WAY": {
+      "filter": {
+        "operator": "and",
+        "fields": [{
+          "field": "projects_link",
+          "comparison": "is",
+          "value": ["project_id"]
+        }]
+      },
+      "ERROR": "Returns 0 results - 'is' doesn't work for linked records"
+    },
+    "CORRECT_WAY": {
+      "filter": {
+        "operator": "and",
+        "fields": [{
+          "field": "projects_link",
+          "comparison": "has_any_of",
+          "value": ["project_id"]
+        }]
+      },
+      "SUCCESS": "Returns all records linked to this project"
+    }
+  },
+
+  "create_linked_records": {
+    "name": "Create Record with Relationships",
+    "description": "Create record with proper linked record formatting",
+    "danger_level": "YELLOW",
+    "template": {
+      "method": "POST",
+      "endpoint": "/api/v1/applications/{tableId}/records/",
+      "body": {
+        "title": "New Task",
+        "project_id": ["68a8ff5237fde0bf797c05b3"],
+        "assigned_to": ["user_id_1", "user_id_2"],
+        "parent_task": ["parent_task_id"]
+      }
+    },
+    "critical_rules": {
+      "format": "ALL linked records must be arrays",
+      "validation": "Linked record IDs must exist",
+      "bidirectional": "SmartSuite auto-updates reverse links"
+    }
+  },
+
+  "update_select_field": {
+    "name": "Update Single/Multi Select Field Values",
+    "description": "Correctly update select field using option codes",
+    "danger_level": "YELLOW",
+    "template": {
+      "single_select": {
+        "method": "PATCH",
+        "endpoint": "/api/v1/applications/{tableId}/records/{recordId}/",
+        "body": {
+          "status": "in_progress",
+          "priority": "high"
+        },
+        "note": "Use option code, not display label"
+      },
+      "multi_select": {
+        "method": "PATCH",
+        "endpoint": "/api/v1/applications/{tableId}/records/{recordId}/",
+        "body": {
+          "tags": ["tag_code_1", "tag_code_2"]
+        },
+        "note": "Array of option codes"
+      }
+    },
+    "finding_codes": {
+      "method": "GET",
+      "endpoint": "/api/v1/applications/{tableId}/",
+      "path": "structure[].params.choices[].value"
+    }
+  },
+
+  "rich_text_update": {
+    "name": "Update Rich Text Field",
+    "description": "Properly format rich text with SmartDoc structure",
+    "danger_level": "GREEN",
+    "template": {
+      "method": "PATCH",
+      "endpoint": "/api/v1/applications/{tableId}/records/{recordId}/",
+      "body": {
+        "description": {
+          "data": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Your rich text content here"
+                  }
+                ]
+              }
+            ]
+          },
+          "html": "<p>Your rich text content here</p>",
+          "preview": "Your rich text content here"
+        }
+      }
+    },
+    "structure_required": "All three fields (data, html, preview) needed"
+  },
+
+  "count_filtered_records": {
+    "name": "Count Records Without Retrieving Data",
+    "description": "Efficiently count records matching criteria",
+    "danger_level": "GREEN",
+    "template": {
+      "method": "POST",
+      "endpoint": "/api/v1/applications/{tableId}/records/list/",
+      "body": {
+        "count_only": true,
+        "filter": {
+          "operator": "and",
+          "fields": [{
+            "field": "status",
+            "comparison": "is",
+            "value": "active"
+          }]
+        }
+      },
+      "response": {
+        "count": 245
+      }
+    },
+    "use_cases": [
+      "Check if records exist before bulk operation",
+      "Display counts in dashboards",
+      "Validate filter effectiveness"
+    ]
+  },
+
+  "search_text_records": {
+    "name": "Text Search Across Records",
+    "description": "Search for text in specific or all fields",
+    "danger_level": "GREEN",
+    "template": {
+      "method": "POST",
+      "endpoint": "/api/v1/applications/{tableId}/records/search/",
+      "body": {
+        "query": "search text",
+        "fields": ["title", "description"],
+        "limit": 2
+      }
+    },
+    "notes": [
+      "Different from filter - uses text matching",
+      "Can search across multiple fields",
+      "Case-insensitive by default"
+    ]
+  },
+
+  "create_with_autonumber": {
+    "name": "Create Record with Autonumber Field",
+    "description": "Properly handle autonumber fields in creation",
+    "danger_level": "GREEN",
+    "template": {
+      "method": "POST",
+      "endpoint": "/api/v1/applications/{tableId}/records/",
+      "body": {
+        "title": "New Record",
+        "other_fields": "values"
+      },
+      "note": "DO NOT include autonumber field - it's auto-generated",
+      "response": {
+        "id": "generated_id",
+        "autonumber": "AUTO-001"
+      }
+    }
+  },
+
+  "batch_creation_pattern": {
+    "name": "Create Multiple Related Records",
+    "description": "Pattern for creating parent and child records",
+    "danger_level": "YELLOW",
+    "template": {
+      "step1_parent": {
+        "method": "POST",
+        "endpoint": "/api/v1/applications/{parentTableId}/records/",
+        "body": {
+          "title": "Parent Record"
+        },
+        "capture": "parent_id from response"
+      },
+      "step2_children": {
+        "method": "POST",
+        "endpoint": "/api/v1/applications/{childTableId}/records/bulk/",
+        "body": {
+          "items": [
+            {
+              "title": "Child 1",
+              "parent_id": ["captured_parent_id"]
+            },
+            {
+              "title": "Child 2",
+              "parent_id": ["captured_parent_id"]
+            }
+          ]
+        },
+        "note": "Maximum 25 children per batch"
+      }
+    }
+  },
+
+  "safe_field_discovery": {
+    "name": "Discover Field Slugs and Types",
+    "description": "Find correct field identifiers for operations",
+    "danger_level": "GREEN",
+    "template": {
+      "method": "GET",
+      "endpoint": "/api/v1/applications/{tableId}/",
+      "response_structure": {
+        "structure": [
+          {
+            "slug": "field_identifier",
+            "label": "Display Name",
+            "field_type": "field_type_code",
+            "params": {
+              "required": true,
+              "choices": []
+            }
+          }
+        ]
+      },
+      "usage": "Use 'slug' for API operations, not 'label'"
+    }
+  },
+
+  "webhook_creation": {
+    "name": "Create Webhook for Real-time Updates",
+    "description": "Set up webhook for record changes",
+    "danger_level": "YELLOW",
+    "template": {
+      "method": "POST",
+      "endpoint": "/api/v1/applications/{tableId}/webhooks/",
+      "body": {
+        "url": "https://your-endpoint.com/webhook",
+        "events": ["record.created", "record.updated", "record.deleted"],
+        "active": true
+      }
+    },
+    "available_events": [
+      "record.created",
+      "record.updated",
+      "record.deleted",
+      "field.created",
+      "field.updated",
+      "field.deleted"
+    ]
+  },
+
+  "file_upload": {
+    "name": "Upload File to Record",
+    "description": "Attach files to records",
+    "danger_level": "GREEN",
+    "template": {
+      "method": "POST",
+      "endpoint": "/api/v1/applications/{tableId}/records/{recordId}/files/",
+      "headers": {
+        "Content-Type": "multipart/form-data"
+      },
+      "body": "FormData with 'file' field",
+      "note": "Different content type than JSON requests"
+    }
+  },
+
+  "activity_log_retrieval": {
+    "name": "Get Record Change History",
+    "description": "Retrieve audit log for a record",
+    "danger_level": "GREEN",
+    "template": {
+      "method": "GET",
+      "endpoint": "/api/v1/applications/{tableId}/records/{recordId}/activity/",
+      "response": {
+        "activities": [
+          {
+            "action": "updated",
+            "field": "status",
+            "old_value": "pending",
+            "new_value": "active",
+            "user": "user_id",
+            "timestamp": "2025-01-09T10:00:00Z"
+          }
+        ]
+      }
+    }
+  },
+
+  "error_handling_pattern": {
+    "name": "Robust API Error Handling",
+    "description": "Standard pattern for handling SmartSuite API responses",
+    "danger_level": "GREEN",
+    "template": {
+      "status_check": "response.status_code == 200",
+      "response_parsing": {
+        "list_endpoints": "data if isinstance(data, list) else data.get('items', [])",
+        "single_record": "response.json() if 200 <= status < 300 else None",
+        "error_logging": "f'Error {response.status_code}: {response.text}'"
+      },
+      "common_status_codes": {
+        "200": "Success",
+        "400": "Bad Request - check payload format",
+        "401": "Unauthorized - check API token and Account-Id header", 
+        "404": "Not Found - check endpoint URL and trailing slash",
+        "429": "Rate Limit - implement 30s backoff",
+        "500": "Server Error - retry with exponential backoff"
+      },
+      "python_example": "if response.status_code == 200:\n    data = response.json()\n    records = data if isinstance(data, list) else data.get('items', [])\nelse:\n    print(f'Error {response.status_code}: {response.text}')"
+    }
+  },
+
+  "field_discovery_pattern": {
+    "name": "Systematic Field Structure Analysis",
+    "description": "Pattern for discovering field types and relationships",
+    "danger_level": "GREEN",
+    "template": {
+      "step1_schema": {
+        "method": "GET",
+        "endpoint": "/api/v1/applications/{tableId}/",
+        "purpose": "Get field definitions from structure array"
+      },
+      "step2_sample": {
+        "method": "POST", 
+        "endpoint": "/api/v1/applications/{tableId}/records/list/",
+        "body": {"limit": 1},
+        "purpose": "Get sample record to analyze actual data formats"
+      },
+      "analysis_pattern": {
+        "field_types": "field.get('field_type')",
+        "linked_records": "field_type == 'linkedrecordfield'",
+        "relationship_target": "params.get('application_id')",
+        "select_options": "params.get('choices', []) for select fields",
+        "required_fields": "params.get('required', False)"
+      },
+      "python_example": "for field in schema['structure']:\n    if field['field_type'] == 'linkedrecordfield':\n        print(f\"Link: {field['slug']} -> {field['params']['application_id']}\")"
+    }
+  }
+}

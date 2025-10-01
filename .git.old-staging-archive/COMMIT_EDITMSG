@@ -1,0 +1,28 @@
+feat: implement QueryHandler for QUERY-001 contract (GREEN state)
+
+Components implemented:
+- QueryHandler class with list/get/search/count operations
+- Minimal implementation following SmartSuite client delegation pattern
+- Mock-based unit tests with full coverage of contract requirements
+
+Architecture:
+- QueryHandler → SmartSuiteClient → SmartSuite API (delegation pattern)
+- Dependency injection via setClient() for testability
+- Operation routing based on context.operation parameter
+
+Test Results: 7/7 passing (GREEN state achieved)
+- List records with pagination
+- Get single record by ID
+- Search with filters
+- Count records
+- Error handling for invalid table IDs
+
+Quality Gates: ✓ lint ✓ typecheck ✓ test
+
+Contract: QUERY-001 (List records by table ID)
+Phase: RED → GREEN (minimal code to pass tests)
+Next: REFACTOR phase for code optimization
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>

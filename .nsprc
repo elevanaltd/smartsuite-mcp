@@ -1,0 +1,81 @@
+{
+  "1107292": {
+    "reason": "FALSE POSITIVE: ansi-regex - Legitimate terminal regex library falsely flagged as malware. Part of npm/chalk ecosystem.",
+    "expires": "2025-12-31",
+    "package": "ansi-regex",
+    "severity": "critical",
+    "url": "https://github.com/advisories/GHSA-jvhh-2m83-6w29"
+  },
+  
+  "1107296": {
+    "reason": "FALSE POSITIVE: ansi-styles - Legitimate ANSI terminal styling library falsely flagged as malware. Core dependency of chalk.",
+    "expires": "2025-12-31",
+    "package": "ansi-styles",
+    "severity": "critical",
+    "url": "https://github.com/advisories/GHSA-p5rr-crjh-x7gr"
+  },
+  
+  "1107295": {
+    "reason": "FALSE POSITIVE: chalk - Legitimate and widely-used terminal string styling library falsely flagged as malware.",
+    "expires": "2025-12-31",
+    "package": "chalk",
+    "severity": "critical",
+    "url": "https://github.com/advisories/GHSA-2v46-p5h4-248w"
+  },
+  
+  "1107290": {
+    "reason": "FALSE POSITIVE: slice-ansi - Legitimate string slicing library for ANSI escape codes falsely flagged as malware.",
+    "expires": "2025-12-31",
+    "package": "slice-ansi",
+    "severity": "critical",
+    "url": "https://github.com/advisories/GHSA-9xjj-cmqc-578p"
+  },
+  
+  "1107294": {
+    "reason": "FALSE POSITIVE: strip-ansi - Legitimate ANSI escape code stripping library falsely flagged as malware.",
+    "expires": "2025-12-31",
+    "package": "strip-ansi",
+    "severity": "critical",
+    "url": "https://github.com/advisories/GHSA-vfjc-p7x3-q864"
+  },
+  
+  "1107293": {
+    "reason": "FALSE POSITIVE: supports-color - Legitimate terminal color support detection library falsely flagged as malware.",
+    "expires": "2025-12-31",
+    "package": "supports-color",
+    "severity": "critical",
+    "url": "https://github.com/advisories/GHSA-pj3j-3w3f-j752"
+  },
+  
+  "1107291": {
+    "reason": "FALSE POSITIVE: wrap-ansi - Legitimate word-wrapping library for ANSI strings falsely flagged as malware.",
+    "expires": "2025-12-31",
+    "package": "wrap-ansi",
+    "severity": "critical",
+    "url": "https://github.com/advisories/GHSA-2rv4-jp6r-xgq7"
+  },
+  
+  "1107280": {
+    "reason": "FALSE POSITIVE: color-name - Legitimate color name library falsely flagged as malware.",
+    "expires": "2025-12-31",
+    "package": "color-name",
+    "severity": "critical",
+    "url": "https://github.com/advisories/GHSA-m99c-cfww-cxqx"
+  },
+  
+  "1107276": {
+    "reason": "FALSE POSITIVE: color-string - Legitimate color string parsing library falsely flagged as malware.",
+    "expires": "2025-12-31",
+    "package": "color-string",
+    "severity": "critical",
+    "url": "https://github.com/advisories/GHSA-3q87-f72r-3gm6"
+  },
+  
+  "1107278": {
+    "reason": "FALSE POSITIVE: is-arrayish - Legitimate array checking utility falsely flagged as malware.",
+    "expires": "2025-12-31",
+    "package": "is-arrayish",
+    "severity": "critical",
+    "url": "https://github.com/advisories/GHSA-hfm8-9jrf-7g9w"
+  }
+}

@@ -1,0 +1,371 @@
+{
+  "UUID_PRESERVATION": {
+    "name": "Status Field UUID Protection",
+    "applies_to": ["change_field", "status", "singleselectfield", "multiselectfield"],
+    "danger_level": "CRITICAL",
+    "description": "Prevent UUID corruption when updating status/select fields",
+    "validation_rules": [
+      {
+        "condition": "payload.options !== undefined",
+        "action": "BLOCK",
+        "message": "BLOCKED: 'options' parameter will destroy all existing UUIDs and data. Use 'choices' parameter instead.",
+        "education": "Status fields store data using UUIDs. The 'options' parameter replaces ALL options and generates new UUIDs, losing all existing data. The 'choices' parameter preserves existing UUIDs."
+      }
+    ],
+    "safe_pattern": {
+      "method": "PUT",
+      "endpoint": "/change_field/",
+      "body": {
+        "choices": [
+          {
+            "value": "existing_uuid_must_be_preserved",
+            "label": "New Display Label"
+          }
+        ]
+      }
+    },
+    "recovery": "If UUIDs are lost, manual data restoration required for all records"
+  },
+
+  "PRODUCTION_DETECTION": {
+    "name": "Production vs Test Environment Detection",
+    "applies_to": ["all_operations"],
+    "danger_level": "YELLOW",
+    "description": "Identify and warn when operating on production data",
+    "test_tables": [
+      "68ab34b30b1e05e11a8ba87f",
+      "68ab34b30b1e05e11a8ba880",
+      "68ab34b30b1e05e11a8ba881"
+    ],
+    "production_indicators": {
+      "workspace": "s3qnmox1",
+      "solutions": {
+        "EAV_Projects": "68a8ff2ac85c2cf83c8a8133",
+        "EAV_Operations": "68b6d66b33630eb365ae54cb",
+        "EAV_System": "68b6d6a633630eb365ae54d1"
+      }
+    },
+    "warning_template": "⚠️ PRODUCTION DATA - Table {table_name} contains live business data. Double-check before proceeding."
+  },
+
+  "BULK_OPERATION_SAFETY": {
+    "name": "Bulk Operation Limits",
+    "applies_to": ["bulk_create", "bulk_update", "bulk_delete"],
+    "danger_level": "YELLOW",
+    "description": "Enforce SmartSuite's 25-record bulk operation limit",
+    "validation_rules": [
+      {
+        "condition": "payload.items && payload.items.length > 25",
+        "action": "BLOCK",
+        "message": "Bulk operation exceeds SmartSuite's 25-record limit. Split into smaller batches.",
+        "education": "SmartSuite API limits bulk operations to 25 records per request for performance and reliability."
+      },
+      {
+        "condition": "operation === 'bulk_delete'",
+        "action": "WARN",
+        "message": "⚠️ Bulk delete will permanently remove {count} records. This cannot be undone.",
+        "require_confirmation": true
+      }
+    ],
+    "safe_limits": {
+      "max_per_request": 25,
+      "recommended": 20,
+      "retry_on_partial_failure": true
+    }
+  },
+
+  "ENDPOINT_VALIDATION": {
+    "name": "API Endpoint Correction",
+    "applies_to": ["all_operations"],
+    "danger_level": "GREEN",
+    "description": "Validate and correct common endpoint mistakes",
+    "corrections": {
+      "GET /records": {
+        "correct": "POST /records/list/",
+        "note": "List operations require POST with body"
+      },
+      "DELETE /records/{id}": {
+        "correct": "DELETE /records/{id}/",
+        "note": "Trailing slash required"
+      },
+      "/structure": {
+        "correct": "/applications/{id}/",
+        "note": "No structure sub-endpoint"
+      },
+      "api.smartsuite.com": {
+        "correct": "app.smartsuite.com",
+        "note": "Use app not api subdomain"
+      }
+    }
+  },
+
+  "FIELD_VALUE_VALIDATION": {
+    "name": "Field Value Format Validation",
+    "applies_to": ["create_record", "update_record"],
+    "danger_level": "YELLOW",
+    "description": "Ensure correct field value formats",
+    "validation_rules": [
+      {
+        "field_type": "linkedrecordfield",
+        "validation": "value must be array",
+        "transform": "string → [string]",
+        "example": {
+          "wrong": "\"68a8ff5237fde0bf797c05b3\"",
+          "correct": "[\"68a8ff5237fde0bf797c05b3\"]"
+        }
+      },
+      {
+        "field_type": "singleselectfield",
+        "validation": "use option code, not label",
+        "example": {
+          "wrong": "\"In Progress\"",
+          "correct": "\"in_progress\""
+        }
+      },
+      {
+        "field_type": "richtextareafield",
+        "validation": "SmartDoc structure required",
+        "structure": {
+          "data": { "type": "doc", "content": [] },
+          "html": "<p>text</p>",
+          "preview": "text"
+        }
+      }
+    ]
+  },
+
+  "RATE_LIMITING": {
+    "name": "API Rate Limit Management",
+    "applies_to": ["all_operations"],
+    "danger_level": "YELLOW",
+    "description": "Prevent rate limit violations",
+    "limits": {
+      "requests_per_second": 4,
+      "burst_limit": 10,
+      "429_backoff_ms": 30000
+    },
+    "enforcement": {
+      "between_requests_ms": 250,
+      "after_429_wait_ms": 30000,
+      "max_retries": 3
+    },
+    "detection": {
+      "response_code": 429,
+      "header": "X-RateLimit-Remaining"
+    }
+  },
+
+  "TOKEN_MANAGEMENT": {
+    "name": "MCP Token Limit Protection",
+    "applies_to": ["list_records", "get_record"],
+    "danger_level": "YELLOW",
+    "description": "Prevent token limit exceeded errors",
+    "limits": {
+      "mcp_max_tokens": 25000,
+      "safe_record_limit": 2,
+      "warning_threshold": 15000
+    },
+    "validation_rules": [
+      {
+        "condition": "operation === 'list' && limit > 3",
+        "action": "WARN",
+        "message": "Limit > 3 may exceed MCP token limit. Each record can be 10-25K tokens.",
+        "recommendation": "Use limit: 2 for safety"
+      }
+    ],
+    "safe_defaults": {
+      "limit": 2,
+      "hydrated": false,
+      "fields": "specify only needed fields when possible"
+    }
+  },
+
+  "DELETION_SAFETY": {
+    "name": "Deletion Operation Protection",
+    "applies_to": ["delete_record", "bulk_delete", "delete_field"],
+    "danger_level": "RED",
+    "description": "Prevent accidental data loss",
+    "validation_rules": [
+      {
+        "condition": "operation.includes('delete')",
+        "action": "CONFIRM",
+        "message": "🚨 DELETION OPERATION - This will permanently remove data",
+        "require_confirmation": true,
+        "show_impact": "Will delete {count} record(s) or field affecting {record_count} records"
+      }
+    ],
+    "pre_deletion_checks": [
+      "Verify target ID is correct",
+      "Check for dependent records",
+      "Consider soft delete alternatives",
+      "Ensure backup exists"
+    ]
+  },
+
+  "FIELD_MODIFICATION_SAFETY": {
+    "name": "Field Structure Change Protection",
+    "applies_to": ["change_field", "add_field"],
+    "danger_level": "RED",
+    "description": "Protect against field structure corruption",
+    "known_issues": {
+      "change_field": {
+        "status": "BROKEN",
+        "symptom": "Returns 200 but doesn't update",
+        "workaround": "Use SmartSuite UI only"
+      }
+    },
+    "validation_rules": [
+      {
+        "condition": "changing field type",
+        "action": "BLOCK",
+        "message": "Field type changes can corrupt existing data. Create new field instead."
+      },
+      {
+        "condition": "deleting field options",
+        "action": "WARN",
+        "message": "Removing options will null those values in existing records"
+      }
+    ]
+  },
+
+  "AUTHENTICATION_VALIDATION": {
+    "name": "Authentication Header Validation",
+    "applies_to": ["all_operations"],
+    "danger_level": "GREEN",
+    "description": "Ensure correct authentication format",
+    "required_headers": {
+      "Authorization": {
+        "format": "Token {api_key}",
+        "not": "Bearer {api_key}",
+        "validation": "must start with 'Token '"
+      },
+      "ACCOUNT-ID": {
+        "format": "{workspace_id}",
+        "example": "s3qnmox1",
+        "validation": "required for all requests"
+      }
+    },
+    "common_errors": [
+      "Using Bearer instead of Token",
+      "Missing ACCOUNT-ID header",
+      "Wrong workspace ID"
+    ]
+  },
+
+  "TRANSACTION_SAFETY": {
+    "name": "Transaction and Rollback Management",
+    "applies_to": ["all_mutations"],
+    "danger_level": "YELLOW",
+    "description": "Enable safe rollback of operations",
+    "requirements": [
+      "Log operation before execution",
+      "Capture full request payload",
+      "Store previous state when possible",
+      "Generate transaction ID"
+    ],
+    "rollback_strategy": {
+      "create": "Delete created record",
+      "update": "Restore previous values",
+      "delete": "Cannot rollback - warn user",
+      "bulk": "Track individual operations"
+    }
+  },
+
+  "VALIDATION_SEQUENCING": {
+    "name": "Operation Validation Order",
+    "applies_to": ["all_operations"],
+    "danger_level": "GREEN",
+    "description": "Correct order for validation checks",
+    "sequence": [
+      {
+        "step": 1,
+        "check": "Authentication valid",
+        "fail_fast": true
+      },
+      {
+        "step": 2,
+        "check": "Endpoint format correct",
+        "auto_correct": true
+      },
+      {
+        "step": 3,
+        "check": "Rate limits OK",
+        "wait_if_needed": true
+      },
+      {
+        "step": 4,
+        "check": "Payload structure valid",
+        "validate_against_schema": true
+      },
+      {
+        "step": 5,
+        "check": "Safety protocols pass",
+        "check_all_applicable": true
+      },
+      {
+        "step": 6,
+        "check": "Confirmation if required",
+        "for_dangerous_ops": true
+      }
+    ]
+  },
+
+  "ERROR_RECOVERY": {
+    "name": "Error Recovery Protocols",
+    "applies_to": ["all_operations"],
+    "danger_level": "GREEN",
+    "description": "Standardized error handling and recovery",
+    "strategies": {
+      "429": {
+        "action": "Wait 30 seconds and retry",
+        "max_retries": 3
+      },
+      "500-504": {
+        "action": "Exponential backoff retry",
+        "max_retries": 3,
+        "backoff": [1000, 2000, 4000]
+      },
+      "400": {
+        "action": "Validate and fix payload",
+        "check": "Field formats and requirements"
+      },
+      "401": {
+        "action": "Check authentication headers",
+        "verify": "Token format and workspace ID"
+      },
+      "404": {
+        "action": "Verify endpoint and IDs",
+        "check": "Trailing slashes and correct format"
+      }
+    }
+  },
+
+  "FIELD_DEPENDENCY_CHECK": {
+    "name": "Field Dependency Validation",
+    "applies_to": ["delete_field", "change_field"],
+    "danger_level": "RED",
+    "description": "Check field dependencies before modification",
+    "checks": [
+      "Automations using this field",
+      "Formulas referencing this field",
+      "Views filtered/sorted by this field",
+      "Required field in forms",
+      "Linked record relationships"
+    ],
+    "action": "List all dependencies before allowing modification"
+  },
+
+  "WORKSPACE_ISOLATION": {
+    "name": "Workspace Boundary Protection",
+    "applies_to": ["all_operations"],
+    "danger_level": "YELLOW",
+    "description": "Prevent cross-workspace operations",
+    "validation": "Verify all IDs belong to current workspace",
+    "check": {
+      "table_id": "Must exist in workspace",
+      "record_id": "Must belong to specified table",
+      "field_slug": "Must exist in table schema"
+    },
+    "error": "Operation attempted on resource outside current workspace"
+  }
+}

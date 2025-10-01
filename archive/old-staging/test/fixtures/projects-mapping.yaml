@@ -1,0 +1,42 @@
+# Test fixture for projects field mapping
+# Critical-Engineer: consulted for test data management and integration test strategy
+tableName: projects
+tableId: '68a8ff5237fde0bf797c05b3'
+solutionId: '68b6d66b33630eb365ae54cb'
+
+fields:
+  # Core fields
+  title: 'title'
+  eavCode: 'autonumber'
+  projectName: 'project_name_actual'
+  client: 'sbfc98645c'
+  projectManager: 'project_manager'
+  primaryContactEmail: 'primary_contact'
+  
+  # Complex fields that were missing
+  clientContacts: 'client_contacts'
+  projectBrief: 'project_brief'
+  financialRecords: 'sn0a32ss'
+  projectLifecycle: 'project_lifecycle'
+  
+  # Status and priority
+  projectPhase: 'status'
+  priority: 'priority'
+  
+  # Metrics
+  totalVideosCount: 'total_videos_count'
+  initialProjectCost: 'initial_cost'
+  
+  # Dates
+  agreementDate: 'agreement_date'
+  
+  # Stream status
+  bookingStreamStatus: 'bkgstream'
+  
+  # Counters and links
+  filmingBlockers: 'se202948fd'
+  videosOld: 'si8yx4fb'
+  
+  # System fields
+  firstCreated: 'first_created'
+  lastUpdated: 'last_updated'

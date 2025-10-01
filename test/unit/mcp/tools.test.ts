@@ -33,6 +33,26 @@ describe('MCP Tool Layer', () => {
   // ============================================================================
 
   describe('smartsuite_query tool', () => {
+    // Set up mock client for all delegation tests
+    beforeEach(async () => {
+      const { setToolsClient } = await import('../../../src/mcp/tools.js');
+
+      // Create minimal mock client for testing
+      const mockClient = {
+        apiKey: 'test-key',
+        workspaceId: 'test-workspace',
+        listRecords: vi.fn(),
+        getRecord: vi.fn(),
+        createRecord: vi.fn(),
+        updateRecord: vi.fn(),
+        deleteRecord: vi.fn(),
+        getSchema: vi.fn(),
+        countRecords: vi.fn(),
+        request: vi.fn(),
+      };
+
+      setToolsClient(mockClient as any);
+    });
 
     describe('MCP-TOOLS-001: Schema validation', () => {
       it('should define MCP-compliant tool schema', async () => {
@@ -227,6 +247,25 @@ describe('MCP Tool Layer', () => {
   // ============================================================================
 
   describe('smartsuite_record tool', () => {
+    // Set up mock client for all delegation tests
+    beforeEach(async () => {
+      const { setToolsClient } = await import('../../../src/mcp/tools.js');
+
+      const mockClient = {
+        apiKey: 'test-key',
+        workspaceId: 'test-workspace',
+        listRecords: vi.fn(),
+        getRecord: vi.fn(),
+        createRecord: vi.fn(),
+        updateRecord: vi.fn(),
+        deleteRecord: vi.fn(),
+        getSchema: vi.fn(),
+        countRecords: vi.fn(),
+        request: vi.fn(),
+      };
+
+      setToolsClient(mockClient as any);
+    });
 
     describe('MCP-TOOLS-005: Schema validation', () => {
       it('should define MCP-compliant tool schema with dry_run default', async () => {
@@ -463,6 +502,25 @@ describe('MCP Tool Layer', () => {
   // ============================================================================
 
   describe('smartsuite_schema tool', () => {
+    // Set up mock client for all delegation tests
+    beforeEach(async () => {
+      const { setToolsClient } = await import('../../../src/mcp/tools.js');
+
+      const mockClient = {
+        apiKey: 'test-key',
+        workspaceId: 'test-workspace',
+        listRecords: vi.fn(),
+        getRecord: vi.fn(),
+        createRecord: vi.fn(),
+        updateRecord: vi.fn(),
+        deleteRecord: vi.fn(),
+        getSchema: vi.fn(),
+        countRecords: vi.fn(),
+        request: vi.fn(),
+      };
+
+      setToolsClient(mockClient as any);
+    });
 
     describe('MCP-TOOLS-009: Schema validation', () => {
       it('should define MCP-compliant tool schema with output modes', async () => {
@@ -643,6 +701,33 @@ describe('MCP Tool Layer', () => {
   // ============================================================================
 
   describe('smartsuite_discover tool', () => {
+    // Set up mock client and field translator for all delegation tests
+    beforeEach(async () => {
+      const { setToolsClient, setFieldTranslator } = await import('../../../src/mcp/tools.js');
+
+      const mockClient = {
+        apiKey: 'test-key',
+        workspaceId: 'test-workspace',
+        listRecords: vi.fn(),
+        getRecord: vi.fn(),
+        createRecord: vi.fn(),
+        updateRecord: vi.fn(),
+        deleteRecord: vi.fn(),
+        getSchema: vi.fn(),
+        countRecords: vi.fn(),
+        request: vi.fn(),
+      };
+
+      const mockTranslator = {
+        translateDisplayToStorage: vi.fn(),
+        translateStorageToDisplay: vi.fn(),
+        getFieldMetadata: vi.fn(),
+        getAllFieldsForTable: vi.fn(),
+      };
+
+      setToolsClient(mockClient as any);
+      setFieldTranslator(mockTranslator as any);
+    });
 
     describe('MCP-TOOLS-013: Schema validation', () => {
       it('should define MCP-compliant tool schema with operation modes', async () => {
@@ -806,6 +891,25 @@ describe('MCP Tool Layer', () => {
   // ============================================================================
 
   describe('smartsuite_undo tool', () => {
+    // Set up mock client for all delegation tests
+    beforeEach(async () => {
+      const { setToolsClient } = await import('../../../src/mcp/tools.js');
+
+      const mockClient = {
+        apiKey: 'test-key',
+        workspaceId: 'test-workspace',
+        listRecords: vi.fn(),
+        getRecord: vi.fn(),
+        createRecord: vi.fn(),
+        updateRecord: vi.fn(),
+        deleteRecord: vi.fn(),
+        getSchema: vi.fn(),
+        countRecords: vi.fn(),
+        request: vi.fn(),
+      };
+
+      setToolsClient(mockClient as any);
+    });
 
     describe('MCP-TOOLS-017: Schema validation', () => {
       it('should define MCP-compliant tool schema', async () => {
@@ -1101,7 +1205,7 @@ describe('MCP Tool Layer', () => {
 
         const { executeQueryTool } = await import('../../../src/mcp/tools.js');
 
-        const result = await executeQueryTool({
+        await executeQueryTool({
           operation: 'list',
           tableId: '68a8ff5237fde0bf797c05b3',
           limit: 5, // MCP token safety default

@@ -12,7 +12,7 @@ import type { SmartSuiteClient } from '../smartsuite-client.js';
 export interface RecordContext {
   operation: 'create' | 'update' | 'delete';
   tableId: string;
-  recordId?: string | undefined;
+  recordId?: string;
   data?: Record<string, unknown>;
   dryRun: boolean;
   validated?: boolean; // For testing - indicates prior validation
@@ -26,7 +26,7 @@ export interface DryRunResult {
   dryRun: true;
   operation: string;
   tableId: string;
-  recordId?: string | undefined;
+  recordId?: string;
   validated: boolean;
   preview?: Record<string, unknown>;
   errors?: string[];
@@ -39,7 +39,7 @@ export interface DryRunResult {
 export interface RecordResult {
   id?: string;
   deleted?: boolean;
-  recordId?: string | undefined;
+  recordId?: string;
   [key: string]: unknown;
 }
 
@@ -150,11 +150,11 @@ export class RecordHandler {
         const schema = await this.client!.getSchema(tableId);
         const formatErrors = this.validateFieldFormats(data, schema);
         errors.push(...formatErrors);
-      } catch (_error) {
+      } catch (error) {
         // const errorMessage = error instanceof Error ? error.message : String(error);
         // Schema validation failure is not fatal - just log warning
         // Tests may proceed without schema if connectivity passed
-        // console.warn(`Schema validation skipped: ${String(_error)}`); // Disabled for production
+        // console.warn(`Schema validation skipped: ${error}`); // Disabled for production
       }
     }
 

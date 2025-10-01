@@ -119,7 +119,7 @@ describe('RecordHandler', () => {
       expect(result).toHaveProperty('validated', false);
       expect(result).toHaveProperty('errors');
       expect(result.errors).toContain(
-        expect.stringMatching(/SmartDoc|rich text|format/i),
+        expect.stringMatching(/SmartDoc|rich text|format/i)
       );
     });
 
@@ -161,7 +161,7 @@ describe('RecordHandler', () => {
       expect(result).toHaveProperty('validated', false);
       expect(result).toHaveProperty('errors');
       expect(result.errors).toContain(
-        expect.stringMatching(/array|linked record/i),
+        expect.stringMatching(/array|linked record/i)
       );
     });
   });
@@ -223,7 +223,7 @@ describe('RecordHandler', () => {
           data: { title: 'Test' },
           dryRun: false,
           // validated: false (implicit)
-        }),
+        })
       ).rejects.toThrow(/validation required|must validate first/i);
     });
   });
@@ -388,7 +388,7 @@ describe('RecordHandler', () => {
           tableId: invalidTableId,
           data: { title: 'Test' },
           dryRun: true,
-        }),
+        })
       ).rejects.toThrow(/invalid.*table/i);
     });
 
@@ -409,7 +409,7 @@ describe('RecordHandler', () => {
           // recordId missing
           data: { title: 'Test' },
           dryRun: true,
-        }),
+        })
       ).rejects.toThrow(/record.*id.*required/i);
     });
 
@@ -429,7 +429,7 @@ describe('RecordHandler', () => {
           tableId,
           // recordId missing
           dryRun: true,
-        }),
+        })
       ).rejects.toThrow(/record.*id.*required/i);
     });
   });

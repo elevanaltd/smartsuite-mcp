@@ -1,0 +1,108 @@
+# TESTGUARD_BYPASS: INFRA-007 - CI/CD pipeline configuration
+# Critical-Engineer: consulted for CI/CD workflow strategy and quality gate enforcement
+# TRACED: CI pipeline implementing quality gates mandate from Phase 0
+name: Quality Gates - Phoenix MCP
+
+on:
+  push:
+    branches:
+      - main
+      - 'phase-**'  # All phase branches (phase-2c, phase-2d, etc.)
+  pull_request:
+    branches:
+      - main
+
+# Minimal security permissions
+permissions:
+  contents: read
+
+jobs:
+  quality-gates:
+    name: Quality Gates (Lint + TypeCheck + Test)
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run Quality Gates
+      # This runs: lint + typecheck + test:ci (unit tests)
+      run: npm run quality-gates
+      env:
+        NODE_ENV: test
+
+    - name: Upload coverage (Node 20.x only)
+      if: matrix.node-version == '20.x'
+      uses: codecov/codecov-action@v3
+      continue-on-error: true
+      with:
+        file: ./coverage/lcov.info
+        flags: unittests
+        name: codecov-phoenix-mcp
+
+  build-validation:
+    name: Build Validation
+    needs: quality-gates
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build project
+      run: npm run build
+
+    - name: Validate build output
+      run: npm run validate-build
+      env:
+        NODE_ENV: ci
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-artifacts
+        path: build/
+        retention-days: 1
+
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run security audit
+      run: npx better-npm-audit audit --level high
+      continue-on-error: true

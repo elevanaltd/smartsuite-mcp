@@ -7,8 +7,9 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import type { SmartSuiteClient } from '../../../src/core/smartsuite-client.js';
+
 import type { FieldTranslator } from '../../../src/core/field-translator.js';
+import type { SmartSuiteClient } from '../../../src/core/smartsuite-client.js';
 
 describe('DiscoverHandler', () => {
   let mockClient: SmartSuiteClient;

@@ -76,8 +76,8 @@ describe('SchemaHandler', () => {
       expect(result).toHaveProperty('id', tableId);
       expect(result).toHaveProperty('name', 'Test Table');
       expect(result).toHaveProperty('structure');
-      expect(Array.isArray(result.structure)).toBe(true);
-      expect(result.structure).toHaveLength(3);
+      expect(Array.isArray((result as any).structure)).toBe(true);
+      expect((result as any).structure).toHaveLength(3);
 
       // Assert - Client called correctly
       expect(mockClient.getSchema).toHaveBeenCalledWith(tableId);
@@ -108,7 +108,7 @@ describe('SchemaHandler', () => {
 
       // Assert
       expect(result).toHaveProperty('structure');
-      expect(result.structure).toHaveLength(0);
+      expect((result as any).structure).toHaveLength(0);
     });
   });
 
@@ -147,7 +147,7 @@ describe('SchemaHandler', () => {
       expect(result).toHaveProperty('field_types');
 
       // Field type counts
-      expect(result.field_types).toEqual({
+      expect((result as any).field_types).toEqual({
         textfield: 2,
         numberfield: 1,
       });
@@ -196,10 +196,10 @@ describe('SchemaHandler', () => {
       expect(result).toHaveProperty('name', 'Test Table');
       expect(result).toHaveProperty('field_count', 2);
       expect(result).toHaveProperty('fields');
-      expect(Array.isArray(result.fields)).toBe(true);
+      expect(Array.isArray((result as any).fields)).toBe(true);
 
       // Field details
-      expect(result.fields).toEqual([
+      expect((result as any).fields).toEqual([
         {
           slug: 'title',
           label: 'Title',
@@ -344,7 +344,7 @@ describe('SchemaHandler', () => {
 
       // Assert - Readable field type distribution
       expect(result).toHaveProperty('field_types');
-      expect(result.field_types).toEqual({
+      expect((result as any).field_types).toEqual({
         textfield: 2,
         numberfield: 2,
         statusfield: 1,
@@ -380,9 +380,9 @@ describe('SchemaHandler', () => {
       });
 
       // Assert - Order preserved
-      expect(result.structure[0]).toHaveProperty('slug', 'first');
-      expect(result.structure[1]).toHaveProperty('slug', 'second');
-      expect(result.structure[2]).toHaveProperty('slug', 'third');
+      expect((result as any).structure[0]).toHaveProperty('slug', 'first');
+      expect((result as any).structure[1]).toHaveProperty('slug', 'second');
+      expect((result as any).structure[2]).toHaveProperty('slug', 'third');
     });
   });
 

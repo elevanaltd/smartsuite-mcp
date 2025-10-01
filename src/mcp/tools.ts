@@ -52,6 +52,19 @@ let smartsuiteClient: SmartSuiteClient | null = null;
 let fieldTranslator: FieldTranslator | null = null;
 
 /**
+ * Handler dependency container for testability
+ * Enables mock injection without breaking runtime architecture
+ */
+interface HandlerDependencies {
+  queryHandler?: QueryHandler;
+  recordHandler?: RecordHandler;
+  schemaHandler?: SchemaHandler;
+  discoverHandler?: DiscoverHandler;
+}
+
+let handlerDependencies: HandlerDependencies = {};
+
+/**
  * Set SmartSuite client for all tools
  * Called by MCP server initialization
  */
@@ -65,6 +78,22 @@ export function setToolsClient(client: SmartSuiteClient): void {
  */
 export function setFieldTranslator(translator: FieldTranslator): void {
   fieldTranslator = translator;
+}
+
+/**
+ * Inject handler dependencies for testing
+ * Enables mock handlers without breaking production code
+ */
+export function setHandlerDependencies(deps: HandlerDependencies): void {
+  handlerDependencies = { ...handlerDependencies, ...deps };
+}
+
+/**
+ * Reset handler dependencies to production defaults
+ * Called between tests to ensure isolation
+ */
+export function resetHandlerDependencies(): void {
+  handlerDependencies = {};
 }
 
 // ============================================================================
@@ -244,8 +273,11 @@ export async function executeQueryTool(params: Record<string, unknown>): Promise
   }
 
   // Delegate to QueryHandler (CONTRACT: MCP-TOOLS-003)
-  const handler = new QueryHandler();
-  handler.setClient(smartsuiteClient);
+  // Use injected handler for tests, or create new instance for production
+  const handler = handlerDependencies.queryHandler ?? new QueryHandler();
+  if (!handlerDependencies.queryHandler) {
+    handler.setClient(smartsuiteClient);
+  }
 
   const context: {
     operation: 'list' | 'get' | 'search' | 'count';
@@ -321,8 +353,11 @@ export async function executeRecordTool(params: Record<string, unknown>): Promis
   const dryRun = params.dryRun ?? true;
 
   // Delegate to RecordHandler
-  const handler = new RecordHandler();
-  handler.setClient(smartsuiteClient);
+  // Use injected handler for tests, or create new instance for production
+  const handler = handlerDependencies.recordHandler ?? new RecordHandler();
+  if (!handlerDependencies.recordHandler) {
+    handler.setClient(smartsuiteClient);
+  }
 
   const context: {
     operation: 'create' | 'update' | 'delete';
@@ -363,10 +398,13 @@ export async function executeSchemaTool(params: Record<string, unknown>): Promis
 
   // Validate outputMode enum
   const validModes = ['summary', 'fields', 'detailed'];
-  const outputModeStr = String(outputMode);
-  if (!validModes.includes(outputModeStr)) {
+  // Ensure outputMode is a string before validation
+  if (typeof outputMode !== 'string') {
+    throw new Error('outputMode must be a string');
+  }
+  if (!validModes.includes(outputMode)) {
     throw new Error(
-      `Invalid outputMode "${outputModeStr}". Must be one of: ${validModes.join(', ')}`,
+      `Invalid outputMode "${outputMode}". Must be one of: ${validModes.join(', ')}`,
     );
   }
 
@@ -376,8 +414,11 @@ export async function executeSchemaTool(params: Record<string, unknown>): Promis
   }
 
   // Delegate to SchemaHandler (CONTRACT: MCP-TOOLS-011)
-  const handler = new SchemaHandler();
-  handler.setClient(smartsuiteClient);
+  // Use injected handler for tests, or create new instance for production
+  const handler = handlerDependencies.schemaHandler ?? new SchemaHandler();
+  if (!handlerDependencies.schemaHandler) {
+    handler.setClient(smartsuiteClient);
+  }
 
   return await handler.execute({
     tableId,
@@ -421,9 +462,12 @@ export async function executeDiscoverTool(params: Record<string, unknown>): Prom
   }
 
   // Delegate to DiscoverHandler (CONTRACT: MCP-TOOLS-015)
-  const handler = new DiscoverHandler();
-  handler.setClient(smartsuiteClient);
-  handler.setFieldTranslator(fieldTranslator);
+  // Use injected handler for tests, or create new instance for production
+  const handler = handlerDependencies.discoverHandler ?? new DiscoverHandler();
+  if (!handlerDependencies.discoverHandler) {
+    handler.setClient(smartsuiteClient);
+    handler.setFieldTranslator(fieldTranslator);
+  }
 
   const context: {
     operation: 'fields' | 'tables';

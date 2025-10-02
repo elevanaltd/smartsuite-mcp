@@ -946,11 +946,11 @@ describe('MCP Tool Layer', () => {
 
         // Current implementation throws "not yet implemented"
         // Future implementation will delegate to UndoHandler via DI
-        expect(() =>
+        await expect(
           executeUndoTool({
             transaction_id: 'txn_123',
           }),
-        ).toThrow('UndoHandler not implemented');
+        ).rejects.toThrow('UndoHandler not implemented');
       });
     });
 
@@ -963,11 +963,11 @@ describe('MCP Tool Layer', () => {
 
         // Current implementation throws "not yet implemented"
         // Future implementation will delegate to UndoHandler and propagate errors
-        expect(() =>
+        await expect(
           executeUndoTool({
             transaction_id: 'txn_invalid',
           }),
-        ).toThrow('UndoHandler not implemented');
+        ).rejects.toThrow('UndoHandler not implemented');
       });
 
       it('should propagate already reversed transaction errors', async () => {
@@ -978,20 +978,13 @@ describe('MCP Tool Layer', () => {
 
         // Current implementation throws "not yet implemented"
         // Future implementation will delegate to UndoHandler and detect double-undo
-        expect(() =>
+        await expect(
           executeUndoTool({
             transaction_id: 'txn_123',
           }),
-        ).toThrow('UndoHandler not implemented');
+        ).rejects.toThrow('UndoHandler not implemented');
       });
     });
-  });
-
-  // ============================================================================
-  // CROSS-CUTTING CONCERNS
-  // ============================================================================
-
-  describe('Cross-cutting tool concerns', () => {
 
     describe('MCP-TOOLS-021: Tool registration', () => {
       it('should register all 6 core MCP tools', async () => {

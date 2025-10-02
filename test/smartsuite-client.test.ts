@@ -1,0 +1,1 @@
+/Volumes/HestAI-Projects/smartsuite-api-shim/staging/test/unit/core/smartsuite-client.test.ts

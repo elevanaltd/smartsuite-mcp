@@ -1,0 +1,1 @@
+../../../test/unit/core/smartsuite-client.test.ts

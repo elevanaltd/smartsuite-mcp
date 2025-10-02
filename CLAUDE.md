@@ -7,10 +7,13 @@ PHOENIX_REBUILD_CONTEXT::[
     Phase_2A::QueryHandler[COMPLETE→7_7_tests_GREEN],
     Phase_2B::SmartSuiteClient[COMPLETE→27_27_tests_GREEN→commit_0a0166e],
     Phase_2C::FieldTranslator[COMPLETE→35_35_tests_GREEN→commit_280c23f],
-    Phase_2D::Operation_Handlers[IN_PROGRESS→RecordHandler+SchemaHandler+DiscoverHandler],
-    Phase_3::MCP_Integration[BLOCKED→awaiting_Phase_2D_completion]
+    Phase_2D::Operation_Handlers[COMPLETE→44_handler_tests_GREEN→commit_ca7d485],
+    Phase_2E::MCP_Tool_Layer[COMPLETE→46_tool_tests_GREEN→commit_f75ba76],
+    Phase_2F::MCP_Server_Integration[COMPLETE→344_352_tests_GREEN→commit_c606295→PRODUCTION_READY],
+    Phase_2G::Intelligent_Tool[NEXT→smartsuite_intelligent_handler_implementation],
+    Phase_4::User_Validation[PENDING→real_API_testing]
   ]
-  CURRENT_PHASE::Phase_2D[RecordHandler+SchemaHandler+DiscoverHandler]
+  CURRENT_PHASE::Phase_2F_COMPLETE→Phase_2G_NEXT[smartsuite_intelligent_implementation]
   DESIGN_PRINCIPLES::[
     behavioral_tests_as_truth_source,
     minimal_MCP_surface[2_tools_only],
@@ -70,17 +73,20 @@ IMPLEMENTATION_STATUS::[
     Phase_1::Test_contracts[18_behavioral_contracts_P0_P1_P2],
     Phase_2A::QueryHandler[7_7_tests_GREEN],
     Phase_2B::SmartSuiteClient[27_27_tests_GREEN→git_0a0166e],
-    Phase_2C::FieldTranslator[35_35_tests_GREEN→git_280c23f→PR_merged_phase-2c]
+    Phase_2C::FieldTranslator[35_35_tests_GREEN→git_280c23f],
+    Phase_2D::Operation_Handlers[44_handler_tests_GREEN→git_ca7d485],
+    Phase_2E::MCP_Tool_Layer[46_tool_tests_GREEN→git_f75ba76],
+    Phase_2F::MCP_Server_Integration[344_352_tests_GREEN→git_c606295→PRODUCTION_VERIFIED_IN_WARP]
   ]
   IN_PROGRESS::[
-    Phase_2D::Operation_Handlers[RecordHandler+SchemaHandler+DiscoverHandler→harvest_from_archive]
+    Phase_2G::Intelligent_Tool[smartsuite_intelligent_handler_implementation]
   ]
-  BLOCKED::[
-    Phase_3::MCP_Integration[awaiting_Phase_2D_operation_handlers_completion]
+  READY::[
+    Phase_4::User_Validation[real_API_testing_pending_2G_completion]
   ]
   BRANCH_STATUS::[
-    main→Phase_2C_merged[commit_625f813],
-    phase-2d→active_development[commits_234c64d_bf4f30c]
+    main→merged_through_Phase_2E,
+    phase-2f→1_commit_ahead[c606295_uncommitted→ready_for_commit]
   ]
 ]
 

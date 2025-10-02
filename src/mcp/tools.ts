@@ -531,7 +531,7 @@ export async function executeDiscoverTool(params: Record<string, unknown>): Prom
  * NOTE: UndoHandler not yet implemented - this is a placeholder
  * Phase 2E focuses on tool layer, UndoHandler will be Phase 2F
  */
-export function executeUndoTool(params: Record<string, unknown>): never {
+export function executeUndoTool(params: Record<string, unknown>): Promise<never> {
   // Parameter validation (CONTRACT: MCP-TOOLS-018)
   validateRequiredParam(params, 'transaction_id', 'string');
 
@@ -539,12 +539,12 @@ export function executeUndoTool(params: Record<string, unknown>): never {
 
   // Validate transaction_id not empty
   if (transactionId.trim() === '') {
-    throw new Error('transaction_id cannot be empty');
+    return Promise.reject(new Error('transaction_id cannot be empty'));
   }
 
   // UndoHandler implementation pending - return placeholder
   // This allows tool layer tests to pass while handler is being developed
-  throw new Error('UndoHandler not implemented - transaction rollback coming in Phase 2F');
+  return Promise.reject(new Error('UndoHandler not implemented - transaction rollback coming in Phase 2F'));
 }
 
 // ============================================================================

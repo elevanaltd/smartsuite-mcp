@@ -4,6 +4,10 @@
 // Architecture: Server → Tools → Handlers → Client → API
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from '@modelcontextprotocol/sdk/types.js';
 
 import packageJson from '../../package.json' with { type: 'json' };
 import { FieldTranslator } from '../core/field-translator.js';
@@ -107,6 +111,52 @@ export function createServer(): Server {
     version: info.version,
   });
 
+  // Register tools/list handler
+  // CONTRACT: SERVER-005 - Tool discovery endpoint
+  server.setRequestHandler(ListToolsRequestSchema, () => {
+    const tools = getRegisteredTools();
+
+    return {
+      tools: tools.map(tool => ({
+        name: tool.name,
+        description: tool.description,
+        inputSchema: tool.inputSchema,
+      })),
+    };
+  });
+
+  // Register tools/call handler
+  // CONTRACT: SERVER-007 - Tool execution endpoint
+  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    const { name, arguments: args } = request.params;
+
+    try {
+      const result = await executeToolByName(name, args ?? {});
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: typeof result === 'string' ? result : JSON.stringify(result, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      // Return error as content for MCP protocol compliance
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error: ${errorMessage}`,
+          },
+        ],
+        isError: true,
+      };
+    }
+  });
+
   return server;
 }
 
@@ -134,7 +184,7 @@ export function getRegisteredTools(): ReturnType<typeof getToolSchemas> {
  * Execute tool by name
  * CONTRACT: SERVER-007 - Tool handler connection
  */
-export async function executeToolByName(
+export function executeToolByName(
   name: string,
   params: Record<string, unknown>,
 ): Promise<unknown> {
@@ -143,14 +193,14 @@ export async function executeToolByName(
 
   if (name === 'smartsuite_intelligent') {
     // Intelligent tool not yet implemented - placeholder for Phase 2G
-    throw new Error(
+    return Promise.reject(new Error(
       'smartsuite_intelligent not implemented - guided operations coming in Phase 2G',
-    );
+    ));
   } else if (name === 'smartsuite_undo') {
     // Undo tool implementation
     return executeUndoTool(params);
   } else {
-    throw new Error(`Unknown tool: ${name}. Only smartsuite_intelligent and smartsuite_undo are registered.`);
+    return Promise.reject(new Error(`Unknown tool: ${name}. Only smartsuite_intelligent and smartsuite_undo are registered.`));
   }
 }
 
@@ -162,7 +212,7 @@ export async function executeToolByName(
  * Start MCP server and register handlers
  * CONTRACT: SERVER-008 - Server startup
  */
-export async function startServer(): Promise<void> {
+export function startServer(): void {
   // Load configuration and initialize client
   const config = loadConfiguration();
   const client = createClient(config.apiKey, config.workspaceId, config.apiUrl);

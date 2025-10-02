@@ -27,9 +27,9 @@ export const server = createServer();
  * Start MCP server with bootstrapping
  * CONTRACT: ENTRY-007, ENTRY-008 - Configuration loading and startup
  */
-export async function startServer(): Promise<void> {
+export function startServer(): void {
   // Bootstrap server initialization (loads config, initializes client)
-  await initializeServer();
+  initializeServer();
 }
 
 // ============================================================================
@@ -113,7 +113,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       setupSignalHandlers(server, transport);
 
       // Start server
-      await startServer();
+      startServer();
 
       // Connect server to transport
       await server.connect(transport);

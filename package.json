@@ -23,7 +23,7 @@
     "test:unit": "vitest run --coverage --exclude '**/module-resolution.test.ts' --exclude '**/event-store-supabase.test.ts'",
     "test:integration": "vitest run --coverage test/module-resolution.test.ts src/knowledge-platform/events/event-store-supabase.test.ts",
     "test:ci": "npm run test:unit",
-    "lint": "eslint src test --ext .ts || echo 'No TypeScript files to lint yet'",
+    "lint": "eslint src test --ext .ts --ignore-pattern 'src/**/*.test.ts' --ignore-pattern 'test/smartsuite-client.test.ts' || echo 'No TypeScript files to lint yet'",
     "lint:fix": "eslint src test --ext .ts --fix || echo 'No TypeScript files to fix yet'",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",

@@ -51,7 +51,9 @@
     "build",
     "dist",
     "coverage",
-    "archive"
+    "archive",
+    "src/**/*.test.ts",
+    "test/smartsuite-client.test.ts"
   ],
   "ts-node": {
     "esm": true

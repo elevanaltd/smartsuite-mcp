@@ -226,6 +226,43 @@ export function getToolSchemas(): ToolSchema[] {
         required: ['transaction_id'],
       },
     },
+    {
+      name: 'smartsuite_intelligent',
+      description: 'AI-guided access to any SmartSuite API with knowledge-driven safety. Supports learn, dry_run, and execute modes for guided operations.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          endpoint: {
+            type: 'string',
+            description: 'SmartSuite API endpoint (e.g., /applications/{id}/records/list/)',
+          },
+          method: {
+            type: 'string',
+            enum: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+            description: 'HTTP method for the operation',
+          },
+          operationDescription: {
+            type: 'string',
+            description: 'Human-readable description of what you want to accomplish',
+          },
+          mode: {
+            type: 'string',
+            enum: ['learn', 'dry_run', 'execute'],
+            default: 'learn',
+            description: 'Operation mode: learn (analyze), dry_run (validate), execute (perform)',
+          },
+          tableId: {
+            type: 'string',
+            description: 'SmartSuite table/application ID for context',
+          },
+          payload: {
+            type: 'object',
+            description: 'Request payload (validated against knowledge base)',
+          },
+        },
+        required: ['endpoint', 'method', 'operationDescription'],
+      },
+    },
   ];
 }
 
@@ -505,14 +542,9 @@ export function executeUndoTool(params: Record<string, unknown>): never {
     throw new Error('transaction_id cannot be empty');
   }
 
-  // Check authentication
-  if (!smartsuiteClient) {
-    throw new Error('Authentication required: SmartSuite client not initialized');
-  }
-
   // UndoHandler implementation pending - return placeholder
   // This allows tool layer tests to pass while handler is being developed
-  throw new Error('UndoHandler not yet implemented - transaction rollback coming in Phase 2F');
+  throw new Error('UndoHandler not implemented - transaction rollback coming in Phase 2F');
 }
 
 // ============================================================================

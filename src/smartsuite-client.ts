@@ -9,4 +9,4 @@ export type {
   SmartSuiteRequestOptions,
 } from './core/smartsuite-client.js';
 
-export { createAuthenticatedClient } from './core/smartsuite-client.js';
+export { createAuthenticatedClient, createClient } from './core/smartsuite-client.js';

@@ -933,7 +933,7 @@ describe('MCP Tool Layer', () => {
           executeUndoTool({
             transaction_id: '', // Empty string
           }),
-        ).toThrow(/transaction_id.*empty/i);
+        ).toThrow('transaction_id cannot be empty');
       });
     });
 
@@ -950,7 +950,7 @@ describe('MCP Tool Layer', () => {
           executeUndoTool({
             transaction_id: 'txn_123',
           }),
-        ).toThrow(/not yet implemented/i);
+        ).toThrow('UndoHandler not implemented');
       });
     });
 
@@ -967,7 +967,7 @@ describe('MCP Tool Layer', () => {
           executeUndoTool({
             transaction_id: 'txn_invalid',
           }),
-        ).toThrow(/not yet implemented/i);
+        ).toThrow('UndoHandler not implemented');
       });
 
       it('should propagate already reversed transaction errors', async () => {
@@ -982,7 +982,7 @@ describe('MCP Tool Layer', () => {
           executeUndoTool({
             transaction_id: 'txn_123',
           }),
-        ).toThrow(/not yet implemented/i);
+        ).toThrow('UndoHandler not implemented');
       });
     });
   });
@@ -994,13 +994,13 @@ describe('MCP Tool Layer', () => {
   describe('Cross-cutting tool concerns', () => {
 
     describe('MCP-TOOLS-021: Tool registration', () => {
-      it('should register all 5 core MCP tools', async () => {
-        // CONTRACT: MCP server must expose all 5 tools to clients
+      it('should register all 6 core MCP tools', async () => {
+        // CONTRACT: MCP server must expose all 6 tools to clients
 
         const { getToolSchemas } = await import('../../../src/mcp/tools.js');
         const schemas = getToolSchemas();
 
-        expect(schemas).toHaveLength(5);
+        expect(schemas).toHaveLength(6);
 
         const toolNames = schemas.map((s) => s.name);
         expect(toolNames).toEqual([
@@ -1009,6 +1009,7 @@ describe('MCP Tool Layer', () => {
           'smartsuite_schema',
           'smartsuite_discover',
           'smartsuite_undo',
+          'smartsuite_intelligent',
         ]);
       });
     });

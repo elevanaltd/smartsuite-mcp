@@ -47,6 +47,7 @@ describe('Entry Point', () => {
     process.env = originalEnv;
     processExitSpy.mockRestore();
     vi.clearAllMocks();
+    vi.resetModules(); // Clear module cache to allow fresh imports with spies
   });
 
   // ============================================================================
@@ -230,6 +231,267 @@ describe('Entry Point', () => {
       });
     });
   });
+  // ============================================================================
+  // BEHAVIORAL CONTRACTS - SIGNAL HANDLER SAFETY
+  // ============================================================================
+  // TESTGUARD APPROVAL: Behavioral tests to prevent critical bugs
+  // BUG-1: Double registration creating duplicate listeners
+  // BUG-2: Silent shutdown failures (exit code 0 on error)
+  // BUG-3: Hung shutdowns blocking termination indefinitely
+  //
+  // These tests validate BEHAVIOR not implementation details
+  // They must FAIL when bugs are present, PASS when bugs are fixed
+
+  describe('Behavioral Contracts - Signal Handler Safety', () => {
+    describe('LIFECYCLE-001: Prevent double handler registration', () => {
+      it('should use process.once() to prevent duplicate SIGINT execution', async () => {
+        // CONTRACT: Multiple setup calls must not create duplicate listeners
+        // BUG-1 PREVENTION: Duplicate handlers cause multiple shutdowns
+        // BEHAVIOR: process.once() ensures single execution per signal
+
+        vi.resetModules(); // Fresh import for clean state
+        const processOnceSpy = vi.spyOn(process, 'once');
+
+        const { setupSignalHandlers } = await import('../../src/index.js');
+
+        const mockServer = {
+          close: vi.fn().mockResolvedValue(undefined),
+        };
+        const mockTransport = {
+          close: vi.fn().mockResolvedValue(undefined),
+        };
+
+        // Call setup once
+        setupSignalHandlers(mockServer as any, mockTransport as any);
+
+        // BEHAVIORAL ASSERTION: Must use .once() not .on() for SIGINT
+        const sigintCalls = processOnceSpy.mock.calls.filter((call) => call[0] === 'SIGINT');
+        expect(sigintCalls.length).toBeGreaterThanOrEqual(1);
+
+        processOnceSpy.mockRestore();
+      });
+
+      it('should use process.once() to prevent duplicate SIGTERM execution', async () => {
+        // CONTRACT: Multiple setup calls must not create duplicate listeners
+        // BUG-1 PREVENTION: Duplicate handlers cause multiple shutdowns
+        // BEHAVIOR: process.once() ensures single execution per signal
+
+        vi.resetModules(); // Fresh import for clean state
+        const processOnceSpy = vi.spyOn(process, 'once');
+
+        const { setupSignalHandlers } = await import('../../src/index.js');
+
+        const mockServer = {
+          close: vi.fn().mockResolvedValue(undefined),
+        };
+        const mockTransport = {
+          close: vi.fn().mockResolvedValue(undefined),
+        };
+
+        // Call setup once
+        setupSignalHandlers(mockServer as any, mockTransport as any);
+
+        // BEHAVIORAL ASSERTION: Must use .once() not .on() for SIGTERM
+        const sigtermCalls = processOnceSpy.mock.calls.filter((call) => call[0] === 'SIGTERM');
+        expect(sigtermCalls.length).toBeGreaterThanOrEqual(1);
+
+        processOnceSpy.mockRestore();
+      });
+    });
+
+    describe('LIFECYCLE-002: Exit code behavior on shutdown outcomes', () => {
+      it('should exit with code 1 when shutdown fails', async () => {
+        // CONTRACT: Shutdown errors must signal failure to supervisor
+        // BUG-2 PREVENTION: Silent failures (exit 0 on error) hide problems
+        // BEHAVIOR: Failed shutdowns MUST exit(1) for supervisor awareness
+
+        vi.resetModules(); // Fresh import for clean state
+        const processOnceSpy = vi.spyOn(process, 'once');
+
+        const { setupSignalHandlers } = await import('../../src/index.js');
+
+        const shutdownError = new Error('Shutdown failed - transport error');
+        const mockServer = {
+          close: vi.fn().mockRejectedValue(shutdownError),
+        };
+        const mockTransport = {
+          close: vi.fn().mockRejectedValue(shutdownError),
+        };
+
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+        setupSignalHandlers(mockServer as any, mockTransport as any);
+
+        // Find and trigger SIGINT handler
+        const sigintCall = processOnceSpy.mock.calls.find((call) => call[0] === 'SIGINT');
+        const sigintHandler = sigintCall?.[1];
+
+        if (sigintHandler) {
+          await sigintHandler();
+
+          // BEHAVIORAL ASSERTION: Must exit(1) on failure
+          expect(processExitSpy).toHaveBeenCalledWith(1);
+        }
+
+        consoleErrorSpy.mockRestore();
+        processOnceSpy.mockRestore();
+      });
+
+      it('should exit with code 0 on successful shutdown', async () => {
+        // CONTRACT: Clean shutdowns signal success to supervisor
+        // BEHAVIOR: Successful shutdowns MUST exit(0) for clean termination
+
+        vi.resetModules(); // Fresh import for clean state
+        const processOnceSpy = vi.spyOn(process, 'once');
+
+        const { setupSignalHandlers } = await import('../../src/index.js');
+
+        const mockServer = {
+          close: vi.fn().mockResolvedValue(undefined),
+        };
+        const mockTransport = {
+          close: vi.fn().mockResolvedValue(undefined),
+        };
+
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+        setupSignalHandlers(mockServer as any, mockTransport as any);
+
+        // Find and trigger SIGTERM handler
+        const sigtermCall = processOnceSpy.mock.calls.find((call) => call[0] === 'SIGTERM');
+        const sigtermHandler = sigtermCall?.[1];
+
+        if (sigtermHandler) {
+          await sigtermHandler();
+
+          // BEHAVIORAL ASSERTION: Must exit(0) on success
+          expect(processExitSpy).toHaveBeenCalledWith(0);
+        }
+
+        consoleErrorSpy.mockRestore();
+        processOnceSpy.mockRestore();
+      });
+    });
+
+    describe('LIFECYCLE-003: Timeout protection for hung shutdowns', () => {
+      it('should timeout and exit when shutdown hangs indefinitely', async () => {
+        // CONTRACT: Hung shutdowns must not block termination
+        // BUG-3 PREVENTION: Infinite shutdown hangs prevent container restarts
+        // BEHAVIOR: Shutdown MUST timeout and force exit after threshold
+
+        vi.resetModules(); // Fresh import for clean state
+        vi.useFakeTimers();
+
+        const processOnceSpy = vi.spyOn(process, 'once');
+
+        const { setupSignalHandlers } = await import('../../src/index.js');
+
+        // Mock shutdown that NEVER resolves (simulates hung operation)
+        const mockServer = {
+          close: vi.fn().mockImplementation(() => new Promise(() => {})), // Never resolves
+        };
+        const mockTransport = {
+          close: vi.fn().mockImplementation(() => new Promise(() => {})), // Never resolves
+        };
+
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+        setupSignalHandlers(mockServer as any, mockTransport as any);
+
+        // Find and trigger SIGINT handler
+        const sigintCall = processOnceSpy.mock.calls.find((call) => call[0] === 'SIGINT');
+        const sigintHandler = sigintCall?.[1];
+
+        if (sigintHandler) {
+          const shutdownPromise = sigintHandler();
+
+          // Advance timers past SHUTDOWN_TIMEOUT_MS (500ms)
+          await vi.advanceTimersByTimeAsync(600);
+
+          await shutdownPromise;
+
+          // BEHAVIORAL ASSERTION: Must exit(1) after timeout
+          // Timeout counts as failure (hung shutdown is abnormal)
+          expect(processExitSpy).toHaveBeenCalledWith(1);
+
+          // Verify timeout error was logged
+          expect(consoleErrorSpy).toHaveBeenCalledWith(
+            expect.stringMatching(/shutdown error/i),
+            expect.objectContaining({
+              message: expect.stringMatching(/timeout/i),
+            }),
+          );
+        }
+
+        consoleErrorSpy.mockRestore();
+        processOnceSpy.mockRestore();
+        vi.useRealTimers();
+      });
+
+      it('should complete shutdown before timeout when responsive', async () => {
+        // CONTRACT: Fast shutdowns should complete normally
+        // BEHAVIOR: Timeout should not interfere with responsive shutdowns
+
+        vi.resetModules(); // Fresh import for clean state
+        vi.useFakeTimers();
+
+        const processOnceSpy = vi.spyOn(process, 'once');
+
+        const { setupSignalHandlers } = await import('../../src/index.js');
+
+        // Mock fast shutdown (completes in 100ms)
+        const mockServer = {
+          close: vi.fn().mockImplementation(
+            () =>
+              new Promise((resolve) => {
+                setTimeout(resolve, 100);
+              }),
+          ),
+        };
+        const mockTransport = {
+          close: vi.fn().mockImplementation(
+            () =>
+              new Promise((resolve) => {
+                setTimeout(resolve, 100);
+              }),
+          ),
+        };
+
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+        setupSignalHandlers(mockServer as any, mockTransport as any);
+
+        // Find and trigger SIGTERM handler
+        const sigtermCall = processOnceSpy.mock.calls.find((call) => call[0] === 'SIGTERM');
+        const sigtermHandler = sigtermCall?.[1];
+
+        if (sigtermHandler) {
+          const shutdownPromise = sigtermHandler();
+
+          // Advance timers by 150ms (enough for shutdown, but less than timeout)
+          await vi.advanceTimersByTimeAsync(150);
+
+          await shutdownPromise;
+
+          // BEHAVIORAL ASSERTION: Must exit(0) on successful shutdown
+          expect(processExitSpy).toHaveBeenCalledWith(0);
+
+          // Should NOT have timeout error
+          expect(consoleErrorSpy).not.toHaveBeenCalledWith(
+            expect.stringMatching(/shutdown error/i),
+            expect.objectContaining({
+              message: expect.stringMatching(/timeout/i),
+            }),
+          );
+        }
+
+        consoleErrorSpy.mockRestore();
+        processOnceSpy.mockRestore();
+        vi.useRealTimers();
+      });
+    });
+  });
+
 
   // ============================================================================
   // ERROR BOUNDARIES

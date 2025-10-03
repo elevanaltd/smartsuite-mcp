@@ -8,7 +8,7 @@ import { DiscoverHandler } from './discover-handler.js';
  * Blueprint Line 86-98: Operation Router specification
  */
 export interface FacadeArgs {
-  tool_name?: string;
+  tool_name?: string | undefined;
   operation_description: string;
 }
 
@@ -38,11 +38,11 @@ export class OperationRouter {
     schemaHandler: SchemaHandler,
     discoverHandler: DiscoverHandler
   ) {
-    this.handlers = new Map([
-      ['query', queryHandler],
-      ['record', recordHandler],
-      ['schema', schemaHandler],
-      ['discover', discoverHandler]
+    this.handlers = new Map<string, OperationHandler>([
+      ['query', queryHandler as OperationHandler],
+      ['record', recordHandler as OperationHandler],
+      ['schema', schemaHandler as OperationHandler],
+      ['discover', discoverHandler as OperationHandler]
     ]);
   }
 

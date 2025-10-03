@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { executeIntelligentTool } from '../../../src/mcp/tools.js';
 
 /**
@@ -24,7 +24,7 @@ describe('executeIntelligentTool mode handling', () => {
       const result = await executeIntelligentTool({
         ...mockParams,
         mode: 'learn'
-      });
+      }) as any;
 
       expect(result).toHaveProperty('mode', 'learn');
       expect(result).toHaveProperty('analysis');
@@ -35,7 +35,7 @@ describe('executeIntelligentTool mode handling', () => {
 
     it('should default to learn mode when mode parameter missing', async () => {
       const { mode, ...paramsWithoutMode } = mockParams;
-      const result = await executeIntelligentTool(paramsWithoutMode);
+      const result = await executeIntelligentTool(paramsWithoutMode) as any;
 
       expect(result).toHaveProperty('mode', 'learn');
       expect(result).toHaveProperty('analysis');
@@ -45,7 +45,7 @@ describe('executeIntelligentTool mode handling', () => {
       const result = await executeIntelligentTool({
         ...mockParams,
         mode: 'learn'
-      });
+      }) as any;
 
       expect(result.analysis.safety_level).toMatch(/^(RED|YELLOW|GREEN)$/);
     });
@@ -54,7 +54,7 @@ describe('executeIntelligentTool mode handling', () => {
       const result = await executeIntelligentTool({
         ...mockParams,
         mode: 'learn'
-      });
+      }) as any;
 
       expect(result.analysis).toHaveProperty('guidance');
       expect(typeof result.analysis.guidance).toBe('string');
@@ -66,7 +66,7 @@ describe('executeIntelligentTool mode handling', () => {
       const result = await executeIntelligentTool({
         ...mockParams,
         mode: 'dry_run'
-      });
+      }) as any;
 
       expect(result).toHaveProperty('mode', 'dry_run');
       expect(result).toHaveProperty('valid');
@@ -79,7 +79,7 @@ describe('executeIntelligentTool mode handling', () => {
         method: 'GET',
         operationDescription: 'list records',
         mode: 'dry_run'
-      });
+      }) as any;
 
       expect(result.valid).toBe(false);
       expect(result.analysis.safety_level).toBe('RED');
@@ -94,7 +94,7 @@ describe('executeIntelligentTool mode handling', () => {
         operationDescription: 'list records',
         payload: { limit: 10 },
         mode: 'dry_run'
-      });
+      }) as any;
 
       expect(result.valid).toBe(true);
       expect(result.analysis.safety_level).toMatch(/^(GREEN|YELLOW)$/);
@@ -107,7 +107,7 @@ describe('executeIntelligentTool mode handling', () => {
         operationDescription: 'create record',
         payload: { field_name: 'value' },  // Display name = YELLOW warning
         mode: 'dry_run'
-      });
+      }) as any;
 
       if (result.analysis.safety_level === 'YELLOW') {
         expect(result.analysis.warnings).toBeDefined();
@@ -202,14 +202,14 @@ describe('executeIntelligentTool mode handling', () => {
       const result = await executeIntelligentTool({
         ...mockParams,
         mode: 'learn'
-      });
+      }) as any;
 
       expect(result.mode).toBe('learn');
     });
 
     it('should handle missing mode (defaults to learn)', async () => {
       const { mode, ...paramsWithoutMode} = mockParams;
-      const result = await executeIntelligentTool(paramsWithoutMode);
+      const result = await executeIntelligentTool(paramsWithoutMode) as any;
 
       expect(result.mode).toBe('learn');
     });

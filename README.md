@@ -1,9 +1,9 @@
 <!-- LINK_VALIDATION_BYPASS: coordination directory docs not in staging worktree -->
 # SmartSuite API Shim
 
-**Status:** ✅ Functional - B4+ Working Implementation
-**Test Coverage:** 348+ tests passing with recent MongoDB filtering and schema optimization fixes
-**Server Status:** Fully functional with auto-authentication, 6 MCP tools, and latest enhancements  
+**Status:** ⚠️ Phase 2G Complete (Analysis Only) - Phase 2H (Execution) Pending
+**Test Coverage:** 464+ tests passing with intelligent handler and knowledge base validation
+**Server Status:** 2-tool Sentinel Architecture with safety analysis (execution modes incomplete)  
 
 ## Quick Start
 
@@ -11,32 +11,51 @@
 
 1. **Prerequisites:** Node.js 18+, npm, SmartSuite API credentials
 2. **Installation:** `npm install`
-3. **Build:** `npm run build` 
+3. **Build:** `npm run build`
 4. **Configuration:** Set environment variables `SMARTSUITE_API_TOKEN` and `SMARTSUITE_WORKSPACE_ID`
-5. **Usage:** `npm start` - MCP server with 6 SmartSuite tools ready
+5. **Usage:** `npm start` - MCP server with 2-tool Sentinel Architecture
+
+> **⚠️ CURRENT LIMITATION**: The intelligent tool provides safety analysis but execution modes (dry_run, execute) are not yet implemented. See [Validation Report](../coordination/reports/api/806-REPORT-API-VALIDATION.md) for details.
 
 ## Features
 
-🎯 **Completed B4+ Achievements:**
+🎯 **Phase 2G Achievements (Sentinel Architecture):**
 - ✅ **Auto-Authentication** - Environment variable authentication with fail-fast pattern
-- ✅ **Field Translation** - Human-readable field names for 10 SmartSuite tables 
-- ✅ **6 SmartSuite Tools** - `query`, `record`, `schema`, `undo`, `discover`, `intelligent` operations
-- ✅ **DRY-RUN Safety** - Mutation protection with explicit confirmation required
-- ✅ **Comprehensive Testing** - 348+ tests with recent MongoDB filtering and schema optimization fixes
+- ✅ **Knowledge Base** - Pattern matching for 5 critical safety checks (UUID corruption, bulk limits, HTTP methods, SmartDoc format, field IDs)
+- ✅ **2-Tool Sentinel Pattern** - Intelligent facade + undo (replaces 6 individual tools per blueprint design)
+- ✅ **Safety Analysis** - 3-tier system (RED/YELLOW/GREEN) with actionable guidance
+- ✅ **Comprehensive Testing** - 464+ tests with intelligent handler and knowledge base validation
 - ✅ **CI/CD Pipeline** - Fully resolved with CodeQL integration and quality gates
 - ✅ **Error Handling** - Graceful degradation and clear error messages
-- ✅ **Production Validation** - All critical API fixes applied and verified
 - ✅ **Enhanced Code Quality** - Nullish coalescing, console cleanup, path resolution fixes
 
-### Available Tools
-| Tool | Description | Status |
-|------|-------------|---------|
-| `smartsuite_query` | List, search, get records with MongoDB-style filtering support | ✅ Ready |
-| `smartsuite_record` | Create, update, delete records with DRY-RUN safety | ✅ Ready |
-| `smartsuite_schema` | Get table schema with 3 output modes (summary/fields/detailed) + caching | ✅ Ready |
-| `smartsuite_undo` | Transaction rollback operations | ✅ Ready |
-| `smartsuite_discover` | Field mapping discovery and table structure exploration | ✅ Ready |
-| `smartsuite_intelligent` | AI-guided API operations with knowledge-driven safety | ✅ Ready |
+⚠️ **Phase 2H Pending (Execution Modes):**
+- ❌ **Mode-based Routing** - learn/dry_run/execute modes not implemented
+- ❌ **API Execution** - SmartSuiteClient integration in intelligent handler missing
+- ❌ **CRUD Operations** - Cannot perform actual create/read/update/delete operations
+- ❌ **Transaction History** - Undo functionality blocked by missing execution
+
+### Available MCP Tools (Sentinel Architecture)
+
+| Tool | Description | Implementation Status |
+|------|-------------|----------------------|
+| `smartsuite_intelligent` | Universal SmartSuite operations with intelligent routing and safety analysis | ⚠️ Analysis only - execution modes pending |
+| `smartsuite_undo` | Transaction rollback operations | ⚠️ Placeholder - requires execution to generate transactions |
+
+**Architecture Note**: Per the Phoenix Rebuild Blueprint, the server uses a **2-tool Sentinel Pattern** where `smartsuite_intelligent` acts as a unified facade that routes to internal handlers (query, record, schema, discover). Individual tools are intentionally not exposed at the MCP layer.
+
+### Internal Operation Handlers (Not Exposed)
+
+These handlers exist in the codebase but are accessed through the intelligent facade:
+
+| Handler | Purpose | Status |
+|---------|---------|--------|
+| `QueryHandler` | List, search, get records | ✅ Implemented |
+| `RecordHandler` | Create, update, delete records | ✅ Implemented |
+| `SchemaHandler` | Get table schema and field definitions | ✅ Implemented |
+| `DiscoverHandler` | Field mapping discovery | ✅ Implemented |
+
+**Current Gap**: The intelligent facade analyzes operations but doesn't yet route to these handlers for execution.
 
 ### Supported Tables (10 Configured with Example Mappings)
 - **Projects** (47 mapped fields) - Core project management
@@ -151,19 +170,58 @@ Add to your Claude Desktop MCP configuration:
 - **Complete User Guide**: [`docs/guides/001-DOC-GUIDE-USER-GUIDE.md`](./docs/guides/001-DOC-GUIDE-USER-GUIDE.md) - Detailed usage instructions with examples
 - **Technical Handoff**: [`docs/delivery/202-PROJECT-SMARTSUITE-API-SHIM-B4-HANDOFF.md`](./docs/delivery/202-PROJECT-SMARTSUITE-API-SHIM-B4-HANDOFF.md) - Implementation details and architecture
 
-### Example Usage
+### Example Usage (When Execution Modes Implemented)
+
 ```javascript
-// Query projects with human-readable field names
+// Learn mode - analyze operation for safety (CURRENTLY WORKING)
 {
-  "operation": "list",
-  "appId": "68a8ff5237fde0bf797c05b3",
-  "filters": {
-    "projectName": "Website Redesign",  // Instead of "project_name_actual"
-    "priority": "High",                 // Instead of cryptic priority codes
-    "client": "client-abc-123"          // Instead of "sbfc98645c"
+  "endpoint": "/applications/68a8ff5237fde0bf797c05b3/records/list/",
+  "method": "POST",
+  "operationDescription": "List all projects",
+  "mode": "learn"  // Returns safety analysis only
+}
+
+// Execute mode - perform actual operation (NOT YET IMPLEMENTED)
+{
+  "endpoint": "/applications/68a8ff5237fde0bf797c05b3/records/",
+  "method": "POST",
+  "operationDescription": "Create new project record",
+  "mode": "execute",  // Would execute after safety check
+  "payload": {
+    "title": "Website Redesign",
+    "priority": "High"
   }
 }
 ```
+
+**Current Behavior**: All modes return safety analysis. Execution logic pending Phase 2H implementation.
+
+## Current Development Status
+
+### ✅ What's Complete (Phase 2G)
+- **Knowledge Base System**: 5 critical safety patterns loaded from `/coordination/smartsuite-truth/`
+- **Safety Analysis**: 3-tier RED/YELLOW/GREEN system with actionable corrections
+- **Intelligent Handler**: analyze() method with pattern matching and guidance generation
+- **Server Infrastructure**: 2-tool MCP registration with proper protocol compliance
+- **Test Coverage**: 464+ tests covering analysis, knowledge base, and handlers
+
+### ⚠️ What's Pending (Phase 2H - Execution Modes)
+See [Validation Report](../coordination/reports/api/806-REPORT-API-VALIDATION.md) for complete analysis.
+
+**Required Implementation**:
+1. **Mode Parameter Handling** - Switch behavior based on learn/dry_run/execute
+2. **Client Integration** - Add SmartSuiteClient to IntelligentHandler via setClient()
+3. **Execute Method** - Implement execute() that analyzes then calls API
+4. **Validate Method** - Implement validate() for dry-run previews
+5. **Response Wrapping** - Return both analysis and API data
+
+**Estimated Effort**: 4-6 hours for senior developer familiar with codebase
+
+### 📋 Next Steps
+1. Review [Phoenix Rebuild Blueprint](../coordination/phoenix-rebuild/001-D3-PHOENIX-REBUILD-BLUEPRINT.md)
+2. Review [Validation Report](../coordination/reports/api/806-REPORT-API-VALIDATION.md)
+3. Implement execution modes per blueprint Section 1.3 (Data Flow Patterns)
+4. Complete Phase 4 validation checklist in [CURRENT-CHECKLIST.md](../coordination/CURRENT-CHECKLIST.md)
 
 ## Coordination Access
 Access project management via `.coord/` symlink

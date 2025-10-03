@@ -9,6 +9,7 @@ import type { FieldTranslator } from '../core/field-translator.js';
 import { DiscoverHandler } from '../operations/discover-handler.js';
 import { IntelligentHandler } from '../operations/intelligent-handler.js';
 import { OperationRouter } from '../operations/operation-router.js';
+import type { OperationHandler } from '../operations/operation-router.js';
 import { QueryHandler } from '../operations/query-handler.js';
 import { RecordHandler } from '../operations/record-handler.js';
 import { SchemaHandler } from '../operations/schema-handler.js';
@@ -641,12 +642,27 @@ export async function executeIntelligentTool(params: Record<string, unknown>): P
       };
     }
 
-    return {
-      mode: 'dry_run',
-      valid: true,
-      analysis,
-      warnings: analysis.warnings,
-    };
+    // Perform input validation
+    try {
+      const handlerType = toolName || inferHandlerType(operationDescription);
+      validateExecutionContext(params, handlerType);
+      const validatedPayload = validateFieldFormats(params.payload, params.fieldTypes);
+
+      return {
+        mode: 'dry_run',
+        valid: true,
+        analysis,
+        warnings: analysis.warnings,
+        validatedPayload, // Include validated payload for inspection
+      };
+    } catch (validationError: any) {
+      return {
+        mode: 'dry_run',
+        valid: false,
+        analysis,
+        validationError: validationError.message,
+      };
+    }
   }
 
   if (mode === 'execute') {
@@ -675,10 +691,14 @@ export async function executeIntelligentTool(params: Record<string, unknown>): P
       }
     }
 
-    // Step 5: Build handler-specific context and execute
-    const context = buildHandlerContext(params, false);  // Execute mode: dryRun=false
-    // Type assertion required because router returns union type with different execute() signatures
-    const result = await handler.execute(context as never);
+    // Step 5: Validate execution context and field formats
+    validateExecutionContext(params, toolName || inferHandlerType(operationDescription));
+    const validatedPayload = validateFieldFormats(params.payload, params.fieldTypes);
+
+    // Step 6: Build handler-specific context and execute with proper type narrowing
+    const context = buildHandlerContext({ ...params, payload: validatedPayload }, false);  // Execute mode: dryRun=false
+    const handlerType = getHandlerType(handler, toolName, operationDescription);
+    const result = await executeWithTypedContext(handler, handlerType, context);
 
     return {
       mode: 'execute',
@@ -704,7 +724,269 @@ function buildHandlerContext(params: Record<string, unknown>, dryRun: boolean): 
     limit: params.limit,
     offset: params.offset,
     dryRun,
+    // Add operation for handler context
+    operation: params.operation,
+    record: params.record,
   };
+}
+
+/**
+ * Get handler type for proper type narrowing
+ * Critical-Engineer Fix #2: Type safety improvement
+ */
+function getHandlerType(
+  handler: OperationHandler,
+  toolName: string | undefined,
+  operationDescription: string,
+): 'query' | 'record' | 'schema' | 'discover' {
+  // Use explicit tool_name if provided
+  if (toolName) {
+    return toolName as 'query' | 'record' | 'schema' | 'discover';
+  }
+
+  // Infer from handler instance type
+  if (handler instanceof QueryHandler) return 'query';
+  if (handler instanceof RecordHandler) return 'record';
+  if (handler instanceof SchemaHandler) return 'schema';
+  if (handler instanceof DiscoverHandler) return 'discover';
+
+  // Fallback to description-based inference
+  const lower = operationDescription.toLowerCase();
+  if (lower.includes('list') || lower.includes('search') || lower.includes('find')) {
+    return 'query';
+  }
+  if (lower.includes('create') || lower.includes('update') || lower.includes('delete')) {
+    return 'record';
+  }
+  if (lower.includes('schema') || lower.includes('structure')) {
+    return 'schema';
+  }
+  if (lower.includes('discover') || lower.includes('mapping')) {
+    return 'discover';
+  }
+
+  // Default to query if uncertain
+  return 'query';
+}
+
+/**
+ * Execute handler with properly typed context
+ * Critical-Engineer Fix #2: Remove "as never" type bypass
+ */
+async function executeWithTypedContext(
+  handler: OperationHandler,
+  handlerType: 'query' | 'record' | 'schema' | 'discover',
+  context: Record<string, unknown>,
+): Promise<unknown> {
+  // Type-safe execution based on handler type
+  switch (handlerType) {
+    case 'query': {
+      const queryHandler = handler as QueryHandler;
+      const queryContext = {
+        operation: ((context.operation as string) || 'list') as 'list' | 'get' | 'search' | 'count',
+        tableId: context.tableId as string,
+        limit: context.limit as number | undefined,
+        offset: context.offset as number | undefined,
+        filter: context.filter,
+        sort: context.sort,
+        dryRun: context.dryRun as boolean,
+      };
+      return queryHandler.execute(queryContext);
+    }
+
+    case 'record': {
+      const recordHandler = handler as RecordHandler;
+      const recordContext = {
+        operation: ((context.operation as string) || 'create') as 'create' | 'update' | 'delete',
+        tableId: context.tableId as string,
+        recordId: context.recordId as string | undefined,
+        record: context.record || context.data,
+        dryRun: context.dryRun as boolean,
+      };
+      return recordHandler.execute(recordContext);
+    }
+
+    case 'schema': {
+      const schemaHandler = handler as SchemaHandler;
+      const schemaContext = {
+        operation: (context.operation as string) || 'get',
+        tableId: context.tableId as string,
+        dryRun: context.dryRun as boolean,
+      };
+      return schemaHandler.execute(schemaContext);
+    }
+
+    case 'discover': {
+      const discoverHandler = handler as DiscoverHandler;
+      const discoverContext = {
+        operation: ((context.operation as string) || 'fields') as 'fields' | 'tables',
+        tableId: context.tableId as string,
+        dryRun: context.dryRun as boolean,
+      };
+      return discoverHandler.execute(discoverContext);
+    }
+
+    default:
+      throw new Error(`Unknown handler type: ${handlerType}`);
+  }
+}
+
+/**
+ * Infer handler type from operation description
+ * Helper for validation when tool_name not provided
+ */
+function inferHandlerType(description: string): string {
+  const lower = description.toLowerCase();
+  if (lower.includes('list') || lower.includes('search') || lower.includes('find')) {
+    return 'query';
+  }
+  if (lower.includes('create') || lower.includes('update') || lower.includes('delete')) {
+    return 'record';
+  }
+  if (lower.includes('schema') || lower.includes('structure')) {
+    return 'schema';
+  }
+  if (lower.includes('discover') || lower.includes('mapping')) {
+    return 'discover';
+  }
+  return 'query'; // default
+}
+
+/**
+ * Validate execution context before API calls
+ * Critical-Engineer Fix #3: Input validation layer
+ */
+function validateExecutionContext(params: Record<string, unknown>, handlerType: string): void {
+  // Validate required fields based on handler type
+  if (handlerType === 'record' || handlerType === 'query' || handlerType === 'schema' || handlerType === 'discover') {
+    if (!params.tableId) {
+      throw new Error(`tableId is required for ${handlerType} operations`);
+    }
+  }
+
+  // Validate operation matches handler capabilities
+  const operation = params.operation as string;
+  if (operation) {
+    const validOperations: Record<string, string[]> = {
+      query: ['list', 'get', 'search', 'count'],
+      record: ['create', 'update', 'delete', 'bulk_create', 'bulk_update', 'bulk_delete'],
+      schema: ['get', 'list'],
+      discover: ['discover', 'fields', 'tables'],
+    };
+
+    const allowed = validOperations[handlerType] || [];
+    if (!allowed.includes(operation)) {
+      throw new Error(`${handlerType.charAt(0).toUpperCase() + handlerType.slice(1)} handler does not support '${operation}' operation`);
+    }
+  }
+
+  // Validate bulk operation limits
+  if (params.payload) {
+    const payload = params.payload as any;
+    if (payload.records && Array.isArray(payload.records)) {
+      if (payload.records.length > 100) {
+        throw new Error('Bulk operation limit exceeded: 100 records maximum');
+      }
+    }
+  }
+
+  // Validate field value sizes
+  if (params.payload) {
+    const validateFieldSizes = (obj: any, path = ''): void => {
+      for (const [key, value] of Object.entries(obj)) {
+        const fieldPath = path ? `${path}.${key}` : key;
+
+        if (typeof value === 'string' && value.length > 100000) {
+          throw new Error(`Field value too large at ${fieldPath}: 100KB maximum`);
+        }
+
+        if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+          validateFieldSizes(value, fieldPath);
+        }
+      }
+    };
+
+    validateFieldSizes(params.payload);
+  }
+}
+
+/**
+ * Validate and transform field formats based on SmartSuite requirements
+ * Critical-Engineer Fix #3: Field format validation
+ */
+function validateFieldFormats(
+  payload: unknown,
+  fieldTypes?: unknown,
+): Record<string, unknown> | undefined {
+  if (!payload || typeof payload !== 'object') {
+    return payload as any;
+  }
+
+  const validated = { ...payload } as Record<string, unknown>;
+  const types = fieldTypes as Record<string, string> | undefined;
+
+  if (!types) {
+    // Basic sanitization without type info
+    for (const [key, value] of Object.entries(validated)) {
+      if (typeof value === 'string') {
+        // Sanitize dangerous characters
+        validated[key] = value
+          .replace(/<script[^>]*>.*?<\/script>/gi, '')
+          .replace(/DROP\s+TABLE/gi, '')
+          .replace(/;\s*--/g, '');
+      }
+    }
+    return validated;
+  }
+
+  // Validate based on field types
+  for (const [fieldName, fieldType] of Object.entries(types)) {
+    const value = validated[fieldName];
+
+    switch (fieldType) {
+      case 'checklist':
+        // Validate checklist format
+        if (value && Array.isArray(value)) {
+          // Check if it's a simple array (invalid)
+          if (value.length > 0 && typeof value[0] === 'string') {
+            throw new Error(
+              `Invalid checklist format for field '${fieldName}': SmartDoc structure required. ` +
+              'Simple arrays will fail silently in SmartSuite API.',
+            );
+          }
+        }
+        break;
+
+      case 'linked_record':
+      case 'linked_records':
+        // Convert single value to array
+        if (value && !Array.isArray(value)) {
+          validated[fieldName] = [value];
+        }
+        break;
+
+      case 'date_range':
+        // Validate date range format
+        if (value && typeof value === 'string') {
+          throw new Error(
+            `Invalid date range format for field '${fieldName}': ` +
+            'Expected object with from_date and to_date properties',
+          );
+        }
+        break;
+
+      default:
+        // Sanitize string values
+        if (typeof value === 'string') {
+          validated[fieldName] = value
+            .replace(/<script[^>]*>.*?<\/script>/gi, '')
+            .replace(/DROP\s+TABLE/gi, '')
+            .replace(/;\s*--/g, '');
+        }
+    }
+  }
+
+  return validated;
 }
 
 // ============================================================================

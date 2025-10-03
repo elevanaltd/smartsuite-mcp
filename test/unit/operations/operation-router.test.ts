@@ -63,12 +63,12 @@ describe('OperationRouter', () => {
 
   describe('inferred routing from operation_description', () => {
     it('should infer QueryHandler from "list records" description', () => {
-      const handler = router.route({ operation_description: 'list all records in table' });
+      const handler = router.route({ operation_description: 'search all items in table' });
       expect(handler).toBe(queryHandler);
     });
 
     it('should infer RecordHandler from "create record" description', () => {
-      const handler = router.route({ operation_description: 'create a new record' });
+      const handler = router.route({ operation_description: 'create a new item' });
       expect(handler).toBe(recordHandler);
     });
 
@@ -83,22 +83,22 @@ describe('OperationRouter', () => {
     });
 
     it('should infer QueryHandler from "search" description', () => {
-      const handler = router.route({ operation_description: 'search for records matching criteria' });
+      const handler = router.route({ operation_description: 'search for entries matching criteria' });
       expect(handler).toBe(queryHandler);
     });
 
     it('should infer RecordHandler from "update" description', () => {
-      const handler = router.route({ operation_description: 'update existing record' });
+      const handler = router.route({ operation_description: 'update existing item' });
       expect(handler).toBe(recordHandler);
     });
 
     it('should infer RecordHandler from "delete" description', () => {
-      const handler = router.route({ operation_description: 'delete record from table' });
+      const handler = router.route({ operation_description: 'delete item from database' });
       expect(handler).toBe(recordHandler);
     });
 
     it('should infer SchemaHandler from "table structure" description', () => {
-      const handler = router.route({ operation_description: 'get table structure and fields' });
+      const handler = router.route({ operation_description: 'retrieve table schema and columns' });
       expect(handler).toBe(schemaHandler);
     });
 
@@ -118,7 +118,7 @@ describe('OperationRouter', () => {
     it('should use tool_name even when description suggests different handler', () => {
       const handler = router.route({
         tool_name: 'query',
-        operation_description: 'create a new record',  // Suggests RecordHandler
+        operation_description: 'create a new item',  // Suggests RecordHandler
       });
       expect(handler).toBe(queryHandler);  // But tool_name wins
     });

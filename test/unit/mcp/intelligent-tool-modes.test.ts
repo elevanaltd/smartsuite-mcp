@@ -14,9 +14,10 @@ import { executeIntelligentTool } from '../../../src/mcp/tools.js';
  */
 describe('executeIntelligentTool mode handling', () => {
   const mockParams = {
+    tool_name: 'query', // Explicit routing to avoid ambiguity
     endpoint: '/applications/test-table/records/list/',
     method: 'POST',
-    operationDescription: 'list records',
+    operationDescription: 'list records via query tool',
     mode: 'learn',
   };
 
@@ -76,9 +77,10 @@ describe('executeIntelligentTool mode handling', () => {
 
     it('should return valid=false for RED safety level', async () => {
       const result = await executeIntelligentTool({
+        tool_name: 'query',
         endpoint: '/applications/123/records',  // GET /records (no trailing slash) = RED blocker
         method: 'GET',
-        operationDescription: 'list records',
+        operationDescription: 'list records via query tool',
         mode: 'dry_run',
       }) as any;
 
@@ -90,9 +92,11 @@ describe('executeIntelligentTool mode handling', () => {
 
     it('should return valid=true for GREEN safety level', async () => {
       const result = await executeIntelligentTool({
+        tool_name: 'query',
         endpoint: '/applications/test-table/records/list/',
         method: 'POST',
-        operationDescription: 'list records',
+        operationDescription: 'list records via query tool',
+        tableId: 'test-table-id',
         payload: { limit: 10 },
         mode: 'dry_run',
       }) as any;
@@ -103,9 +107,10 @@ describe('executeIntelligentTool mode handling', () => {
 
     it('should include warnings for YELLOW safety level', async () => {
       const result = await executeIntelligentTool({
+        tool_name: 'record',
         endpoint: '/applications/test-table/records/',
         method: 'POST',
-        operationDescription: 'create record',
+        operationDescription: 'create record via record tool',
         payload: { field_name: 'value' },  // Display name = YELLOW warning
         mode: 'dry_run',
       }) as any;
@@ -123,9 +128,10 @@ describe('executeIntelligentTool mode handling', () => {
       // Without client, should get "SmartSuiteClient not initialized" error
       await expect(
         executeIntelligentTool({
+          tool_name: 'query',
           endpoint: '/applications/test-table/records/list/',
           method: 'POST',
-          operationDescription: 'list records',
+          operationDescription: 'list records via query tool',
           tableId: 'test-table-id',
           payload: { limit: 2 },
           mode: 'execute',
@@ -138,9 +144,10 @@ describe('executeIntelligentTool mode handling', () => {
       // This should throw "Operation blocked" not "Client not initialized"
       await expect(
         executeIntelligentTool({
+          tool_name: 'query',
           endpoint: '/applications/123/records',  // GET /records (no trailing slash) = RED blocker
           method: 'GET',
-          operationDescription: 'list records',
+          operationDescription: 'list records via query tool',
           tableId: 'test-table-id',
           mode: 'execute',
         }),
@@ -149,12 +156,13 @@ describe('executeIntelligentTool mode handling', () => {
 
     it('should not throw "Operation blocked" for GREEN operations (throws client error instead)', async () => {
       // GREEN operation should NOT be blocked by safety analysis
-      // Should reach handler execution and fail on missing client
+      // Should proceed to routing and fail with client initialization error
       await expect(
         executeIntelligentTool({
+          tool_name: 'query',
           endpoint: '/applications/test-table/records/list/',
           method: 'POST',
-          operationDescription: 'list records',
+          operationDescription: 'list records via query tool',
           tableId: 'test-table-id',
           payload: { limit: 2 },
           mode: 'execute',
@@ -167,9 +175,10 @@ describe('executeIntelligentTool mode handling', () => {
       // Should reach handler and fail on missing client
       await expect(
         executeIntelligentTool({
+          tool_name: 'record',
           endpoint: '/applications/test-table/records/',
           method: 'POST',
-          operationDescription: 'create record with bulk items',
+          operationDescription: 'create record with bulk items via record tool',
           tableId: 'test-table-id',
           payload: { items: Array(30).fill({}) },
           mode: 'execute',

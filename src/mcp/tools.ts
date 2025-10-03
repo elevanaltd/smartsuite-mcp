@@ -782,15 +782,34 @@ async function executeWithTypedContext(
   switch (handlerType) {
     case 'query': {
       const queryHandler = handler as QueryHandler;
-      const queryContext = {
+      const queryContext: {
+        operation: 'list' | 'get' | 'search' | 'count';
+        tableId: string;
+        limit?: number;
+        offset?: number;
+        filter?: unknown;
+        sort?: unknown;
+        dryRun: boolean;
+      } = {
         operation: ((context.operation as string) || 'list') as 'list' | 'get' | 'search' | 'count',
         tableId: context.tableId as string,
-        limit: context.limit as number | undefined,
-        offset: context.offset as number | undefined,
-        filter: context.filter,
-        sort: context.sort,
         dryRun: context.dryRun as boolean,
       };
+
+      // Only add optional properties if they are defined
+      if (context.limit !== undefined) {
+        queryContext.limit = context.limit as number;
+      }
+      if (context.offset !== undefined) {
+        queryContext.offset = context.offset as number;
+      }
+      if (context.filter !== undefined) {
+        queryContext.filter = context.filter;
+      }
+      if (context.sort !== undefined) {
+        queryContext.sort = context.sort;
+      }
+
       return queryHandler.execute(queryContext);
     }
 

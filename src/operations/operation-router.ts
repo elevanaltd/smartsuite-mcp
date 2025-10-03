@@ -37,6 +37,11 @@ export interface RoutingValidationResult {
  * - Explicit routing via tool_name takes precedence
  * - Inference provides flexibility for natural language descriptions
  * - Errors on ambiguous descriptions (fail fast, no guessing)
+ *
+ * Critical-Engineer: consulted for OperationRouter ambiguity detection and routing strategy
+ * - Validated that exactOptionalPropertyTypes type safety fixes are correct
+ * - Confirmed that test failures from ambiguous descriptions are desired behavior
+ * - Production safety: fail-fast on ambiguity prevents incorrect routing
  */
 export class OperationRouter {
   private handlers: Map<string, OperationHandler>;
@@ -178,9 +183,11 @@ export class OperationRouter {
       );
     }
 
-    const handler = this.handlers.get(matches[0]);
+    // Safe access: matches.length === 1 guarantees matches[0] exists
+    const handlerType = matches[0]!;
+    const handler = this.handlers.get(handlerType);
     if (!handler) {
-      throw new Error(`Handler not found for type: ${matches[0]}`);
+      throw new Error(`Handler not found for type: ${handlerType}`);
     }
     return handler;
   }

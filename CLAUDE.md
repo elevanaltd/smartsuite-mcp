@@ -1,6 +1,28 @@
 PHOENIX_REBUILD_CONTEXT::[
   BLUEPRINT::"/Volumes/HestAI-Projects/smartsuite-api-shim/coordination/phoenix-rebuild/001-D3-PHOENIX-REBUILD-BLUEPRINT.md"
-  ARCHITECTURE::Sentinel_Architecture[2_tools_intelligent_facade+undo]
+  ARCHITECTURE::Direct_Tool_Architecture[6_explicit_tools]
+
+  ARCHITECTURAL_DECISION::[
+    DATE::2025-10-03
+    DECISION::Enhanced_Direct_Tools[6_tools+knowledge_wrapper]
+    RATIONALE::[
+      Empirical_Evidence::Facade_added_70%_code_without_user_benefit,
+      Agent_Consensus::requirements-steward+critical-engineer+technical-architect,
+      Constitutional_Compliance::MINIMAL_INTERVENTION_PRINCIPLE[essential_only],
+      North_Star_Amendment::APPROVED[simplest_implementation>fewest_registry_entries]
+    ]
+    REFERENCE_COMMIT::818f7b2[knowledge-base-path-resolution-implementation]
+  ]
+
+  TOOL_ARCHITECTURE::[
+    smartsuite_query[list+get+search+count_operations],
+    smartsuite_record[create+update+delete_operations],
+    smartsuite_schema[table_structure_retrieval],
+    smartsuite_discover[field_mapping_discovery],
+    smartsuite_undo[transaction_rollback],
+    smartsuite_knowledge[SmartDoc_formats+common_patterns]→OPTIONAL[knowledge_wrapper]
+  ]
+
   PHASES::[
     Phase_0::Foundation_Setup[COMPLETE→quality_gates+TypeScript_strict+Vitest+CI],
     Phase_1::Test_Contracts[COMPLETE→18_contracts_P0_P1_P2],
@@ -10,13 +32,15 @@ PHOENIX_REBUILD_CONTEXT::[
     Phase_2D::Operation_Handlers[COMPLETE→44_handler_tests_GREEN→commit_ca7d485],
     Phase_2E::MCP_Tool_Layer[COMPLETE→46_tool_tests_GREEN→commit_f75ba76],
     Phase_2F::MCP_Server_Integration[COMPLETE→344_352_tests_GREEN→commit_c606295→PRODUCTION_READY],
-    Phase_2G::Intelligent_Tool[NEXT→smartsuite_intelligent_handler_implementation],
+    Phase_2G_REVISED::Enhanced_Direct_Tools[remove_filter+implement_knowledge_tool],
     Phase_4::User_Validation[PENDING→real_API_testing]
   ]
-  CURRENT_PHASE::Phase_2F_COMPLETE→Phase_2G_NEXT[smartsuite_intelligent_implementation]
+  CURRENT_PHASE::Phase_2G_REVISED[expose_all_tools+knowledge_wrapper]
+
   DESIGN_PRINCIPLES::[
     behavioral_tests_as_truth_source,
-    minimal_MCP_surface[2_tools_only],
+    simplest_implementation[direct_tools>routing_layers],
+    solo_developer_ergonomics[clear_boundaries>polymorphic_facades],
     quality_gates_first_implementation_second,
     Phoenix_pattern[extract_contracts→discard_broken→rebuild_clean]
   ]

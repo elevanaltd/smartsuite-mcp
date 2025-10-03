@@ -16,7 +16,7 @@ describe('KnowledgeBase', () => {
       const { KnowledgeBase } = await import('../../../src/operations/knowledge-base.js');
 
       // Act
-      const kb = KnowledgeBase.loadFromFiles();
+      const kb = KnowledgeBase.loadFromFiles('test/fixtures/knowledge');
 
       // Assert
       expect(kb).toBeDefined();
@@ -35,7 +35,7 @@ describe('KnowledgeBase', () => {
       const { KnowledgeBase } = await import('../../../src/operations/knowledge-base.js');
 
       // Act
-      const kb = KnowledgeBase.loadFromFiles();
+      const kb = KnowledgeBase.loadFromFiles('test/fixtures/knowledge');
 
       // Assert
       expect(kb.getPatternCount()).toBeGreaterThan(0);
@@ -53,7 +53,7 @@ describe('KnowledgeBase', () => {
       const { KnowledgeBase } = await import('../../../src/operations/knowledge-base.js');
 
       // Act
-      const kb = KnowledgeBase.loadFromFiles();
+      const kb = KnowledgeBase.loadFromFiles('test/fixtures/knowledge');
       const manifest = kb.getManifest();
 
       // Assert
@@ -82,7 +82,7 @@ describe('KnowledgeBase', () => {
 
     beforeEach(async () => {
       const { KnowledgeBase } = await import('../../../src/operations/knowledge-base.js');
-      knowledgeBase = KnowledgeBase.loadFromFiles();
+      knowledgeBase = KnowledgeBase.loadFromFiles('test/fixtures/knowledge');
     });
 
     it('should match UUID corruption pattern (options vs choices)', () => {
@@ -261,7 +261,7 @@ describe('KnowledgeBase', () => {
 
     beforeEach(async () => {
       const { KnowledgeBase } = await import('../../../src/operations/knowledge-base.js');
-      knowledgeBase = KnowledgeBase.loadFromFiles();
+      knowledgeBase = KnowledgeBase.loadFromFiles('test/fixtures/knowledge');
     });
 
     it('should retrieve pattern details by name', () => {

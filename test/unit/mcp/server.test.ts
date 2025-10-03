@@ -264,17 +264,19 @@ describe('MCP Server', () => {
 
         const { executeToolByName } = await import('../../../src/mcp/server.js');
 
-        // Phase 2G: Handler is now implemented - should return analysis result
+        // Phase 2G: Handler is now implemented - should return mode-wrapped analysis
         const result = await executeToolByName('smartsuite_intelligent', {
           endpoint: '/applications/test-id/records/list/',
           method: 'POST',
           operationDescription: 'list records from test table',
-        });
+        }) as any;
 
-        // Should return analysis result with safety level and guidance
-        expect(result).toHaveProperty('safety_level');
-        expect(result).toHaveProperty('guidance');
-        expect(result).toHaveProperty('warnings');
+        // Should return mode-wrapped response (defaults to 'learn' mode)
+        expect(result).toHaveProperty('mode', 'learn');
+        expect(result).toHaveProperty('analysis');
+        expect(result.analysis).toHaveProperty('safety_level');
+        expect(result.analysis).toHaveProperty('guidance');
+        expect(result.analysis).toHaveProperty('warnings');
       });
 
       it('should connect smartsuite_undo to handler', async () => {

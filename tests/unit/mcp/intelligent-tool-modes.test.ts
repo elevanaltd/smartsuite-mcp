@@ -1,0 +1,1 @@
+../../../test/unit/mcp/intelligent-tool-modes.test.ts

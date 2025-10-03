@@ -8,6 +8,7 @@
 import type { FieldTranslator } from '../core/field-translator.js';
 import { DiscoverHandler } from '../operations/discover-handler.js';
 import { IntelligentHandler } from '../operations/intelligent-handler.js';
+import { OperationRouter } from '../operations/operation-router.js';
 import { QueryHandler } from '../operations/query-handler.js';
 import { RecordHandler } from '../operations/record-handler.js';
 import { SchemaHandler } from '../operations/schema-handler.js';
@@ -553,10 +554,13 @@ export function executeUndoTool(params: Record<string, unknown>): Promise<never>
 // ============================================================================
 
 /**
- * Execute intelligent tool
- * Phase 2G: Intelligent handler with knowledge-base driven safety analysis
+ * Execute intelligent tool with mode-based routing
+ * Phase 2G: Mode handling (learn/dry_run/execute) with safety analysis
+ *
+ * API Validation Report Lines 295-335: Required fixes implemented
+ * D3 Blueprint Lines 66-73: IntelligentFacadeTool specification
  */
-export function executeIntelligentTool(params: Record<string, unknown>): Promise<unknown> {
+export async function executeIntelligentTool(params: Record<string, unknown>): Promise<unknown> {
   // Parameter validation
   validateRequiredParam(params, 'endpoint', 'string');
   validateRequiredParam(params, 'method', 'string');
@@ -565,6 +569,15 @@ export function executeIntelligentTool(params: Record<string, unknown>): Promise
   const endpoint = params.endpoint as string;
   const method = params.method as string;
   const operationDescription = params.operationDescription as string;
+  const toolName = params.tool_name as string | undefined;
+
+  // Extract and validate mode (null/undefined defaults to 'learn')
+  let mode = 'learn';
+  if (params.mode !== undefined && params.mode !== null) {
+    mode = params.mode as string;
+  } else if (params.mode === null) {
+    throw new Error('mode parameter cannot be null');
+  }
 
   // Validate HTTP method
   const validMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
@@ -572,10 +585,16 @@ export function executeIntelligentTool(params: Record<string, unknown>): Promise
     throw new Error(`Invalid method "${method}". Must be one of: ${validMethods.join(', ')}`);
   }
 
-  // Create intelligent handler
-  const handler = new IntelligentHandler();
+  // Validate mode parameter
+  const validModes = ['learn', 'dry_run', 'execute'];
+  if (!validModes.includes(mode)) {
+    throw new Error(`Invalid mode: ${mode}. Must be one of: ${validModes.join(', ')}`);
+  }
 
-  // Build operation object for analysis (handle strict optional properties)
+  // Step 1: Safety analysis (always performed regardless of mode)
+  const intelligentHandler = new IntelligentHandler();
+
+  // Build operation object for analysis
   const operation: {
     endpoint: string;
     method: string;
@@ -600,8 +619,97 @@ export function executeIntelligentTool(params: Record<string, unknown>): Promise
     operation.tableId = params.tableId as string;
   }
 
-  // Analyze operation and return guidance
-  return Promise.resolve(handler.analyze(operation));
+  const analysis = intelligentHandler.analyze(operation);
+
+  // Step 2: Mode handling
+  if (mode === 'learn') {
+    // Learn mode: return analysis only (no API execution)
+    return {
+      mode: 'learn',
+      analysis
+    };
+  }
+
+  if (mode === 'dry_run') {
+    // Dry-run mode: validate and return preview
+    if (analysis.safety_level === 'RED') {
+      return {
+        mode: 'dry_run',
+        valid: false,
+        analysis,
+        blockers: analysis.blockers
+      };
+    }
+
+    return {
+      mode: 'dry_run',
+      valid: true,
+      analysis,
+      warnings: analysis.warnings
+    };
+  }
+
+  if (mode === 'execute') {
+    // Execute mode: block if RED, execute if GREEN/YELLOW
+    if (analysis.safety_level === 'RED') {
+      throw new Error(`Operation blocked: ${analysis.blockers.join(', ')}`);
+    }
+
+    // Step 3: Route to appropriate handler using OperationRouter
+    const router = new OperationRouter(
+      new QueryHandler(),
+      new RecordHandler(),
+      new SchemaHandler(),
+      new DiscoverHandler()
+    );
+
+    const handler = router.route({
+      tool_name: toolName,
+      operation_description: operationDescription
+    });
+
+    // Step 4: Inject client into handler (if available)
+    if (smartsuiteClient) {
+      if ('setClient' in handler && typeof handler.setClient === 'function') {
+        handler.setClient(smartsuiteClient);
+      }
+    }
+
+    // Step 5: Build handler-specific context and execute
+    const context = buildHandlerContext(params);
+    const result = await handler.execute(context);
+
+    return {
+      mode: 'execute',
+      analysis,
+      result,
+      success: true
+    };
+  }
+
+  // Should never reach here due to mode validation above
+  throw new Error(`Invalid mode: ${mode}`);
+}
+
+/**
+ * Build handler-specific execution context from MCP parameters
+ */
+function buildHandlerContext(params: Record<string, unknown>): any {
+  const tableId = params.tableId as string | undefined;
+  const recordId = params.recordId as string | undefined;
+  const data = params.payload as Record<string, unknown> | undefined;
+  const limit = params.limit as number | undefined;
+  const offset = params.offset as number | undefined;
+  const dryRun = false;  // Execute mode means dryRun=false
+
+  return {
+    tableId,
+    recordId,
+    data,
+    limit,
+    offset,
+    dryRun
+  };
 }
 
 // ============================================================================

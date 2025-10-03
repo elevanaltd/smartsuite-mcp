@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { executeIntelligentTool } from '../../../src/mcp/tools.js';
 
 /**
@@ -16,14 +17,14 @@ describe('executeIntelligentTool mode handling', () => {
     endpoint: '/applications/test-table/records/list/',
     method: 'POST',
     operationDescription: 'list records',
-    mode: 'learn'
+    mode: 'learn',
   };
 
   describe('learn mode', () => {
     it('should return analysis only (no API execution)', async () => {
       const result = await executeIntelligentTool({
         ...mockParams,
-        mode: 'learn'
+        mode: 'learn',
       }) as any;
 
       expect(result).toHaveProperty('mode', 'learn');
@@ -44,7 +45,7 @@ describe('executeIntelligentTool mode handling', () => {
     it('should include safety level in analysis', async () => {
       const result = await executeIntelligentTool({
         ...mockParams,
-        mode: 'learn'
+        mode: 'learn',
       }) as any;
 
       expect(result.analysis.safety_level).toMatch(/^(RED|YELLOW|GREEN)$/);
@@ -53,7 +54,7 @@ describe('executeIntelligentTool mode handling', () => {
     it('should provide guidance in analysis', async () => {
       const result = await executeIntelligentTool({
         ...mockParams,
-        mode: 'learn'
+        mode: 'learn',
       }) as any;
 
       expect(result.analysis).toHaveProperty('guidance');
@@ -65,7 +66,7 @@ describe('executeIntelligentTool mode handling', () => {
     it('should validate and return preview without executing', async () => {
       const result = await executeIntelligentTool({
         ...mockParams,
-        mode: 'dry_run'
+        mode: 'dry_run',
       }) as any;
 
       expect(result).toHaveProperty('mode', 'dry_run');
@@ -78,7 +79,7 @@ describe('executeIntelligentTool mode handling', () => {
         endpoint: '/applications/123/records',  // GET /records (no trailing slash) = RED blocker
         method: 'GET',
         operationDescription: 'list records',
-        mode: 'dry_run'
+        mode: 'dry_run',
       }) as any;
 
       expect(result.valid).toBe(false);
@@ -93,7 +94,7 @@ describe('executeIntelligentTool mode handling', () => {
         method: 'POST',
         operationDescription: 'list records',
         payload: { limit: 10 },
-        mode: 'dry_run'
+        mode: 'dry_run',
       }) as any;
 
       expect(result.valid).toBe(true);
@@ -106,7 +107,7 @@ describe('executeIntelligentTool mode handling', () => {
         method: 'POST',
         operationDescription: 'create record',
         payload: { field_name: 'value' },  // Display name = YELLOW warning
-        mode: 'dry_run'
+        mode: 'dry_run',
       }) as any;
 
       if (result.analysis.safety_level === 'YELLOW') {
@@ -127,8 +128,8 @@ describe('executeIntelligentTool mode handling', () => {
           operationDescription: 'list records',
           tableId: 'test-table-id',
           payload: { limit: 2 },
-          mode: 'execute'
-        })
+          mode: 'execute',
+        }),
       ).rejects.toThrow(/SmartSuiteClient not initialized/);
     });
 
@@ -141,8 +142,8 @@ describe('executeIntelligentTool mode handling', () => {
           method: 'GET',
           operationDescription: 'list records',
           tableId: 'test-table-id',
-          mode: 'execute'
-        })
+          mode: 'execute',
+        }),
       ).rejects.toThrow(/Operation blocked/);
     });
 
@@ -156,8 +157,8 @@ describe('executeIntelligentTool mode handling', () => {
           operationDescription: 'list records',
           tableId: 'test-table-id',
           payload: { limit: 2 },
-          mode: 'execute'
-        })
+          mode: 'execute',
+        }),
       ).rejects.toThrow(/SmartSuiteClient not initialized/);  // NOT "Operation blocked"
     });
 
@@ -171,8 +172,8 @@ describe('executeIntelligentTool mode handling', () => {
           operationDescription: 'create record with bulk items',
           tableId: 'test-table-id',
           payload: { items: Array(30).fill({}) },
-          mode: 'execute'
-        })
+          mode: 'execute',
+        }),
       ).rejects.toThrow(/SmartSuiteClient not initialized/);  // NOT "Operation blocked"
     });
   });
@@ -182,8 +183,8 @@ describe('executeIntelligentTool mode handling', () => {
       await expect(
         executeIntelligentTool({
           ...mockParams,
-          mode: 'invalid_mode'
-        })
+          mode: 'invalid_mode',
+        }),
       ).rejects.toThrow(/Invalid mode/);
     });
 
@@ -191,8 +192,8 @@ describe('executeIntelligentTool mode handling', () => {
       await expect(
         executeIntelligentTool({
           ...mockParams,
-          mode: null
-        })
+          mode: null,
+        }),
       ).rejects.toThrow();
     });
   });
@@ -201,7 +202,7 @@ describe('executeIntelligentTool mode handling', () => {
     it('should handle mode as string', async () => {
       const result = await executeIntelligentTool({
         ...mockParams,
-        mode: 'learn'
+        mode: 'learn',
       }) as any;
 
       expect(result.mode).toBe('learn');

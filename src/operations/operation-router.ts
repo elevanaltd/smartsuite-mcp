@@ -1,7 +1,7 @@
+import { DiscoverHandler } from './discover-handler.js';
 import { QueryHandler } from './query-handler.js';
 import { RecordHandler } from './record-handler.js';
 import { SchemaHandler } from './schema-handler.js';
-import { DiscoverHandler } from './discover-handler.js';
 
 /**
  * Facade arguments for intelligent routing
@@ -36,13 +36,13 @@ export class OperationRouter {
     queryHandler: QueryHandler,
     recordHandler: RecordHandler,
     schemaHandler: SchemaHandler,
-    discoverHandler: DiscoverHandler
+    discoverHandler: DiscoverHandler,
   ) {
     this.handlers = new Map<string, OperationHandler>([
       ['query', queryHandler as OperationHandler],
       ['record', recordHandler as OperationHandler],
       ['schema', schemaHandler as OperationHandler],
-      ['discover', discoverHandler as OperationHandler]
+      ['discover', discoverHandler as OperationHandler],
     ]);
   }
 

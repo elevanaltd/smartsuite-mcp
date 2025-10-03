@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+
+import { DiscoverHandler } from '../../../src/operations/discover-handler.js';
 import { OperationRouter } from '../../../src/operations/operation-router.js';
 import { QueryHandler } from '../../../src/operations/query-handler.js';
 import { RecordHandler } from '../../../src/operations/record-handler.js';
 import { SchemaHandler } from '../../../src/operations/schema-handler.js';
-import { DiscoverHandler } from '../../../src/operations/discover-handler.js';
 
 describe('OperationRouter', () => {
   let router: OperationRouter;
@@ -22,7 +23,7 @@ describe('OperationRouter', () => {
       queryHandler,
       recordHandler,
       schemaHandler,
-      discoverHandler
+      discoverHandler,
     );
   });
 
@@ -30,7 +31,7 @@ describe('OperationRouter', () => {
     it('should route to QueryHandler when tool_name is "query"', () => {
       const handler = router.route({
         tool_name: 'query',
-        operation_description: 'list records'
+        operation_description: 'list records',
       });
       expect(handler).toBe(queryHandler);
     });
@@ -38,7 +39,7 @@ describe('OperationRouter', () => {
     it('should route to RecordHandler when tool_name is "record"', () => {
       const handler = router.route({
         tool_name: 'record',
-        operation_description: 'create record'
+        operation_description: 'create record',
       });
       expect(handler).toBe(recordHandler);
     });
@@ -46,7 +47,7 @@ describe('OperationRouter', () => {
     it('should route to SchemaHandler when tool_name is "schema"', () => {
       const handler = router.route({
         tool_name: 'schema',
-        operation_description: 'get schema'
+        operation_description: 'get schema',
       });
       expect(handler).toBe(schemaHandler);
     });
@@ -54,7 +55,7 @@ describe('OperationRouter', () => {
     it('should route to DiscoverHandler when tool_name is "discover"', () => {
       const handler = router.route({
         tool_name: 'discover',
-        operation_description: 'get field mappings'
+        operation_description: 'get field mappings',
       });
       expect(handler).toBe(discoverHandler);
     });
@@ -117,7 +118,7 @@ describe('OperationRouter', () => {
     it('should use tool_name even when description suggests different handler', () => {
       const handler = router.route({
         tool_name: 'query',
-        operation_description: 'create a new record'  // Suggests RecordHandler
+        operation_description: 'create a new record',  // Suggests RecordHandler
       });
       expect(handler).toBe(queryHandler);  // But tool_name wins
     });

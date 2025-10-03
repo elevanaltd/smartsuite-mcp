@@ -626,7 +626,7 @@ export async function executeIntelligentTool(params: Record<string, unknown>): P
     // Learn mode: return analysis only (no API execution)
     return {
       mode: 'learn',
-      analysis
+      analysis,
     };
   }
 
@@ -637,7 +637,7 @@ export async function executeIntelligentTool(params: Record<string, unknown>): P
         mode: 'dry_run',
         valid: false,
         analysis,
-        blockers: analysis.blockers
+        blockers: analysis.blockers,
       };
     }
 
@@ -645,7 +645,7 @@ export async function executeIntelligentTool(params: Record<string, unknown>): P
       mode: 'dry_run',
       valid: true,
       analysis,
-      warnings: analysis.warnings
+      warnings: analysis.warnings,
     };
   }
 
@@ -660,12 +660,12 @@ export async function executeIntelligentTool(params: Record<string, unknown>): P
       new QueryHandler(),
       new RecordHandler(),
       new SchemaHandler(),
-      new DiscoverHandler()
+      new DiscoverHandler(),
     );
 
     const handler = router.route({
       tool_name: toolName,
-      operation_description: operationDescription
+      operation_description: operationDescription,
     });
 
     // Step 4: Inject client into handler (if available)
@@ -676,14 +676,15 @@ export async function executeIntelligentTool(params: Record<string, unknown>): P
     }
 
     // Step 5: Build handler-specific context and execute
-    const context = buildHandlerContext(params);
-    const result = await handler.execute(context);
+    const context = buildHandlerContext(params, false);  // Execute mode: dryRun=false
+    // Type assertion required because router returns union type with different execute() signatures
+    const result = await handler.execute(context as never);
 
     return {
       mode: 'execute',
       analysis,
       result,
-      success: true
+      success: true,
     };
   }
 
@@ -693,22 +694,16 @@ export async function executeIntelligentTool(params: Record<string, unknown>): P
 
 /**
  * Build handler-specific execution context from MCP parameters
+ * Returns a base context structure that different handlers extend with specific requirements
  */
-function buildHandlerContext(params: Record<string, unknown>): any {
-  const tableId = params.tableId as string | undefined;
-  const recordId = params.recordId as string | undefined;
-  const data = params.payload as Record<string, unknown> | undefined;
-  const limit = params.limit as number | undefined;
-  const offset = params.offset as number | undefined;
-  const dryRun = false;  // Execute mode means dryRun=false
-
+function buildHandlerContext(params: Record<string, unknown>, dryRun: boolean): Record<string, unknown> {
   return {
-    tableId,
-    recordId,
-    data,
-    limit,
-    offset,
-    dryRun
+    tableId: params.tableId,
+    recordId: params.recordId,
+    data: params.payload,
+    limit: params.limit,
+    offset: params.offset,
+    dryRun,
   };
 }
 

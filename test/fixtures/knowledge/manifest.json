@@ -1,0 +1,21 @@
+{
+  "version": "1.0.0",
+  "api_compatibility": "v1",
+  "last_updated": "2025-10-02",
+  "checksum": "sha256-placeholder",
+  "patterns": [
+    "UUID_CORRUPTION",
+    "BULK_OPERATION_LIMIT",
+    "WRONG_HTTP_METHOD",
+    "SMARTDOC_FORMAT",
+    "FIELD_NAME_VS_ID"
+  ],
+  "knowledge_files": [
+    "CRITICAL-FORMATS-TRUTH.md",
+    "API-CAPABILITIES-TRUTH.md",
+    "API-LIMITATIONS-TRUTH.md",
+    "FIELD-OPERATIONS-TRUTH.md",
+    "QUICK-REFERENCE.md"
+  ],
+  "description": "SmartSuite API knowledge base manifest for intelligent tool safety validation"
+}

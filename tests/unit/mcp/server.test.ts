@@ -1,0 +1,1 @@
+../../../test/unit/mcp/server.test.ts

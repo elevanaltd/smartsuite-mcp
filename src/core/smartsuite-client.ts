@@ -49,6 +49,7 @@ export interface SmartSuiteRequestOptions {
 export interface SmartSuiteClient {
   apiKey: string;
   workspaceId: string;
+  apiUrl?: string;
   listRecords(appId: string, options?: SmartSuiteListOptions): Promise<SmartSuiteListResponse>;
   getRecord(appId: string, recordId: string): Promise<unknown>;
   createRecord(appId: string, data: Record<string, unknown>): Promise<unknown>;
@@ -133,9 +134,10 @@ async function handleAuthError(response: Response): Promise<never> {
 }
 
 /**
- * Create SmartSuite client instance
+ * Create SmartSuite client instance without authentication validation
+ * Used by MCP server for synchronous initialization
  */
-function createClient(apiKey: string, workspaceId: string, baseUrl: string): SmartSuiteClient {
+export function createClient(apiKey: string, workspaceId: string, baseUrl: string): SmartSuiteClient {
   // Create base request function
   const makeRequest = async (
     endpoint: string,
@@ -206,6 +208,7 @@ function createClient(apiKey: string, workspaceId: string, baseUrl: string): Sma
   return {
     apiKey,
     workspaceId,
+    apiUrl: baseUrl,
 
     async listRecords(appId: string, options?: SmartSuiteListOptions): Promise<SmartSuiteListResponse> {
       const requestData = {

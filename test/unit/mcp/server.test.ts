@@ -16,7 +16,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
  * Server Responsibilities:
  * 1. Initialize MCP Server instance with proper configuration
  * 2. Load environment variables for API authentication
- * 3. Register exactly 2 tools (smartsuite_intelligent, smartsuite_undo)
+ * 3. Register exactly 6 tools (smartsuite_query, smartsuite_record, smartsuite_schema, smartsuite_discover, smartsuite_undo, smartsuite_intelligent)
  * 4. Handle server lifecycle (start, shutdown, error recovery)
  * 5. Validate tool schemas match MCP protocol requirements
  *
@@ -185,34 +185,29 @@ describe('MCP Server', () => {
 
   describe('Tool Registration', () => {
     describe('SERVER-005: Tool count validation', () => {
-      it('should register exactly 2 tools', async () => {
-        // CONTRACT: Server exposes only smartsuite_intelligent and smartsuite_undo
-        // Phase 2F scope: Minimal 2-tool implementation
+      it('should register exactly 6 tools', async () => {
+        // CONTRACT: Server exposes all 6 tools (query, record, schema, discover, undo, intelligent)
+        // Phase 2G Revised: Direct 6-tool architecture (architectural amendment 44373ac)
 
         const { getRegisteredTools } = await import('../../../src/mcp/server.js');
         const tools = getRegisteredTools();
 
-        expect(tools).toHaveLength(2);
+        expect(tools).toHaveLength(6);
       });
 
-      it('should register smartsuite_intelligent tool', async () => {
-        // CONTRACT: Primary tool for guided SmartSuite operations
+      it('should register all 6 core tools', async () => {
+        // CONTRACT: All tools accessible without facade layer
 
         const { getRegisteredTools } = await import('../../../src/mcp/server.js');
         const tools = getRegisteredTools();
 
-        const intelligentTool = tools.find((t) => t.name === 'smartsuite_intelligent');
-        expect(intelligentTool).toBeDefined();
-      });
-
-      it('should register smartsuite_undo tool', async () => {
-        // CONTRACT: Transaction rollback capability
-
-        const { getRegisteredTools } = await import('../../../src/mcp/server.js');
-        const tools = getRegisteredTools();
-
-        const undoTool = tools.find((t) => t.name === 'smartsuite_undo');
-        expect(undoTool).toBeDefined();
+        const toolNames = tools.map((t) => t.name);
+        expect(toolNames).toContain('smartsuite_query');
+        expect(toolNames).toContain('smartsuite_record');
+        expect(toolNames).toContain('smartsuite_schema');
+        expect(toolNames).toContain('smartsuite_discover');
+        expect(toolNames).toContain('smartsuite_undo');
+        expect(toolNames).toContain('smartsuite_intelligent');
       });
     });
 
@@ -259,20 +254,59 @@ describe('MCP Server', () => {
     });
 
     describe('SERVER-007: Tool handler connection', () => {
-      it('should connect smartsuite_intelligent to handler', async () => {
+      it('should route smartsuite_query to handler', async () => {
         // CONTRACT: Tool execution should delegate to proper handler
 
         const { executeToolByName } = await import('../../../src/mcp/server.js');
 
-        // This will fail until handler is implemented
+        // Should reject due to missing client initialization, not unknown tool
         await expect(
-          executeToolByName('smartsuite_intelligent', {
-            query: 'list records from test table',
+          executeToolByName('smartsuite_query', {
+            operation: 'list',
+            tableId: 'test-table-id',
           }),
-        ).rejects.toThrow(/not implemented/i);
+        ).rejects.toThrow(/authentication|client/i);
       });
 
-      it('should connect smartsuite_undo to handler', async () => {
+      it('should route smartsuite_record to handler', async () => {
+        // CONTRACT: Tool execution should delegate to proper handler
+
+        const { executeToolByName } = await import('../../../src/mcp/server.js');
+
+        await expect(
+          executeToolByName('smartsuite_record', {
+            operation: 'create',
+            tableId: 'test-table-id',
+            data: { test: 'value' },
+          }),
+        ).rejects.toThrow(/authentication|client/i);
+      });
+
+      it('should route smartsuite_schema to handler', async () => {
+        // CONTRACT: Tool execution should delegate to proper handler
+
+        const { executeToolByName } = await import('../../../src/mcp/server.js');
+
+        await expect(
+          executeToolByName('smartsuite_schema', {
+            tableId: 'test-table-id',
+          }),
+        ).rejects.toThrow(/authentication|client/i);
+      });
+
+      it('should route smartsuite_discover to handler', async () => {
+        // CONTRACT: Tool execution should delegate to proper handler
+
+        const { executeToolByName } = await import('../../../src/mcp/server.js');
+
+        await expect(
+          executeToolByName('smartsuite_discover', {
+            operation: 'tables',
+          }),
+        ).rejects.toThrow(/authentication|client/i);
+      });
+
+      it('should route smartsuite_undo to handler', async () => {
         // CONTRACT: Tool execution should delegate to proper handler
 
         const { executeToolByName } = await import('../../../src/mcp/server.js');
@@ -281,6 +315,20 @@ describe('MCP Server', () => {
         await expect(
           executeToolByName('smartsuite_undo', {
             transaction_id: 'test-transaction-id',
+          }),
+        ).rejects.toThrow(/not implemented/i);
+      });
+
+      it('should route smartsuite_intelligent to placeholder', async () => {
+        // CONTRACT: Placeholder for Phase 2G implementation
+
+        const { executeToolByName } = await import('../../../src/mcp/server.js');
+
+        await expect(
+          executeToolByName('smartsuite_intelligent', {
+            endpoint: '/test',
+            method: 'GET',
+            operationDescription: 'test',
           }),
         ).rejects.toThrow(/not implemented/i);
       });

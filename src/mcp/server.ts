@@ -17,7 +17,12 @@ import {
   getToolSchemas,
   setToolsClient,
   setFieldTranslator,
+  executeQueryTool,
+  executeRecordTool,
+  executeSchemaTool,
+  executeDiscoverTool,
   executeUndoTool,
+  executeIntelligentTool,
 } from './tools.js';
 
 
@@ -167,40 +172,48 @@ export function createServer(): Server {
 /**
  * Get registered tool schemas
  * CONTRACT: SERVER-005, SERVER-006 - Tool registration with MCP-compliant schemas
- * Phase 2F scope: Return only 2 tools (smartsuite_intelligent, smartsuite_undo)
+ * Phase 2G Revised: Direct 6-tool architecture (architectural amendment 44373ac)
+ * Returns all 6 tools without facade layer filtering
  */
 export function getRegisteredTools(): ReturnType<typeof getToolSchemas> {
-  const allTools = getToolSchemas();
-
-  // Phase 2F: Register exactly 2 tools as per test contracts
-  const registeredTools = allTools.filter(
-    (tool) => tool.name === 'smartsuite_intelligent' || tool.name === 'smartsuite_undo',
-  );
-
-  return registeredTools;
+  // Phase 2G Revised: Register all 6 tools directly
+  // smartsuite_query, smartsuite_record, smartsuite_schema, smartsuite_discover, smartsuite_undo, smartsuite_intelligent
+  return getToolSchemas();
 }
 
 /**
  * Execute tool by name
  * CONTRACT: SERVER-007 - Tool handler connection
+ * Phase 2G Revised: Route all 6 tools to their respective handlers
  */
 export function executeToolByName(
   name: string,
   params: Record<string, unknown>,
 ): Promise<unknown> {
-  // Phase 2F: Only smartsuite_intelligent and smartsuite_undo are registered
-  // All other tools throw "unknown tool" error
+  // Phase 2G Revised: Direct routing to all 6 tool handlers
+  switch (name) {
+    case 'smartsuite_query':
+      return executeQueryTool(params);
 
-  if (name === 'smartsuite_intelligent') {
-    // Intelligent tool not yet implemented - placeholder for Phase 2G
-    return Promise.reject(new Error(
-      'smartsuite_intelligent not implemented - guided operations coming in Phase 2G',
-    ));
-  } else if (name === 'smartsuite_undo') {
-    // Undo tool implementation
-    return executeUndoTool(params);
-  } else {
-    return Promise.reject(new Error(`Unknown tool: ${name}. Only smartsuite_intelligent and smartsuite_undo are registered.`));
+    case 'smartsuite_record':
+      return executeRecordTool(params);
+
+    case 'smartsuite_schema':
+      return executeSchemaTool(params);
+
+    case 'smartsuite_discover':
+      return executeDiscoverTool(params);
+
+    case 'smartsuite_undo':
+      return executeUndoTool(params);
+
+    case 'smartsuite_intelligent':
+      return executeIntelligentTool(params);
+
+    default:
+      return Promise.reject(new Error(
+        `Unknown tool: ${name}. Registered tools: smartsuite_query, smartsuite_record, smartsuite_schema, smartsuite_discover, smartsuite_undo, smartsuite_intelligent`,
+      ));
   }
 }
 

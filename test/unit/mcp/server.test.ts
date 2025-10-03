@@ -264,12 +264,17 @@ describe('MCP Server', () => {
 
         const { executeToolByName } = await import('../../../src/mcp/server.js');
 
-        // This will fail until handler is implemented
-        await expect(
-          executeToolByName('smartsuite_intelligent', {
-            query: 'list records from test table',
-          }),
-        ).rejects.toThrow(/not implemented/i);
+        // Phase 2G: Handler is now implemented - should return analysis result
+        const result = await executeToolByName('smartsuite_intelligent', {
+          endpoint: '/applications/test-id/records/list/',
+          method: 'POST',
+          operationDescription: 'list records from test table',
+        });
+
+        // Should return analysis result with safety level and guidance
+        expect(result).toHaveProperty('safety_level');
+        expect(result).toHaveProperty('guidance');
+        expect(result).toHaveProperty('warnings');
       });
 
       it('should connect smartsuite_undo to handler', async () => {
@@ -402,10 +407,16 @@ describe('MCP Server', () => {
 
         const { executeToolByName } = await import('../../../src/mcp/server.js');
 
-        // Force an error condition
-        await expect(
-          executeToolByName('smartsuite_intelligent', { invalid: 'params' }),
-        ).rejects.toThrow();
+        // Force an error condition (missing required params)
+        try {
+          await executeToolByName('smartsuite_intelligent', { invalid: 'params' });
+          // Should not reach here
+          expect.fail('Expected error to be thrown');
+        } catch (error) {
+          // Error should be caught successfully
+          expect(error).toBeInstanceOf(Error);
+          expect((error as Error).message).toContain('required');
+        }
       });
 
       it('should provide error context for debugging', async () => {

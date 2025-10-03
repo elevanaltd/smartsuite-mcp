@@ -2,10 +2,10 @@
 // Purpose: Load and manage SmartSuite API safety patterns
 // Architecture: Dependency injection pattern for testability
 // Critical-Engineer Analysis: 002-PHASE-2G-INTELLIGENT-TOOL-ANALYSIS.md
+// Critical-Engineer: consulted for Resource path resolution strategy
 
 import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
 
 /**
  * Safety level classification
@@ -98,20 +98,66 @@ export class KnowledgeBase {
 
   /**
    * Static factory method to load knowledge base from files
+   * Multi-layered configuration strategy:
+   * 1. Explicit path (for tests)
+   * 2. KNOWLEDGE_BASE_PATH environment variable (for production/staging)
+   * 3. Project root discovery (for local development)
+   *
    * @param basePath Optional base path for knowledge files (for testing)
    * @returns KnowledgeBase instance
    */
   static loadFromFiles(basePath?: string): KnowledgeBase {
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = dirname(__filename);
+    let knowledgePath: string | undefined;
 
-    // Default to coordination/smartsuite-truth directory
-    const knowledgePath = basePath ?? join(__dirname, '../../../coordination/smartsuite-truth');
+    // 1. Prioritize explicit path (for tests)
+    if (basePath) {
+      knowledgePath = basePath;
+    }
+    // 2. Prioritize Environment Variable (for production/staging)
+    else if (process.env.KNOWLEDGE_BASE_PATH) {
+      knowledgePath = process.env.KNOWLEDGE_BASE_PATH;
+    }
+    // 3. Fallback to robust project root discovery (for local development)
+    else {
+      // Find project root with coordination directory
+      // Start from CWD and search upward for coordination/smartsuite-truth
+      let searchDir = process.cwd();
+
+      while (true) {
+        const candidatePath = join(searchDir, 'coordination/smartsuite-truth');
+        if (existsSync(join(candidatePath, 'manifest.json'))) {
+          knowledgePath = candidatePath;
+          break;
+        }
+
+        // Try parent directory
+        const parentDir = dirname(searchDir);
+        if (parentDir === searchDir) {
+          // Reached filesystem root without finding coordination directory
+          throw new Error(
+            'Could not find knowledge base (coordination/smartsuite-truth/manifest.json). ' +
+            'Set KNOWLEDGE_BASE_PATH environment variable or ensure coordination directory exists.',
+          );
+        }
+        searchDir = parentDir;
+      }
+    }
+
+    if (!knowledgePath) {
+      throw new Error('Knowledge base path could not be determined');
+    }
+
     const manifestPath = join(knowledgePath, 'manifest.json');
 
-    // Validate manifest exists
+    // Validate manifest exists with context-specific error message
     if (!existsSync(manifestPath)) {
-      throw new Error(`manifest.json not found at ${manifestPath}`);
+      const source = basePath ? 'explicit path' :
+                     process.env.KNOWLEDGE_BASE_PATH ? 'KNOWLEDGE_BASE_PATH environment variable' :
+                     'discovered project root';
+      throw new Error(
+        `manifest.json not found at ${manifestPath} (from ${source}). ` +
+        'Ensure knowledge base is properly configured.',
+      );
     }
 
     // Load and parse manifest

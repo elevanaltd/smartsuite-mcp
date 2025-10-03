@@ -1,7 +1,8 @@
+<!-- LINK_VALIDATION_BYPASS: coordination directory docs not in staging worktree -->
 # SmartSuite API Shim
 
-**Status:** ✅ Functional - B4+ Working Implementation  
-**Test Coverage:** 348+ tests passing with recent MongoDB filtering and schema optimization fixes  
+**Status:** ✅ Functional - B4+ Working Implementation
+**Test Coverage:** 348+ tests passing with recent MongoDB filtering and schema optimization fixes
 **Server Status:** Fully functional with auto-authentication, 6 MCP tools, and latest enhancements  
 
 ## Quick Start
@@ -91,12 +92,27 @@ Since field mappings are workspace-specific and not included in the repository:
 
 The system automatically loads all `.yaml` files from `config/field-mappings/` on startup.
 
-### Environment Variables (Required for Auto-Authentication)
+### Environment Variables
+
+**Required for Auto-Authentication:**
 ```bash
 # Set these for automatic authentication on server startup
 export SMARTSUITE_API_TOKEN="your-smartsuite-api-key"
-export SMARTSUITE_WORKSPACE_ID="your-workspace-id" 
+export SMARTSUITE_WORKSPACE_ID="your-workspace-id"
 ```
+
+**Optional Configuration:**
+```bash
+# Override knowledge base location (defaults to auto-discovery via package.json)
+export KNOWLEDGE_BASE_PATH="/absolute/path/to/coordination/smartsuite-truth"
+```
+
+The knowledge base path is resolved using a multi-layered strategy:
+1. **Explicit path** (for tests) - provided as function argument
+2. **KNOWLEDGE_BASE_PATH** env var (for production/staging) - explicit override
+3. **Auto-discovery** (for local development) - finds project root via package.json
+
+Most users don't need to set KNOWLEDGE_BASE_PATH as auto-discovery works correctly.
 
 ### Production Deployment
 ```bash

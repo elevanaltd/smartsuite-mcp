@@ -18,6 +18,7 @@ import {
   setToolsClient,
   setFieldTranslator,
   executeUndoTool,
+  executeIntelligentTool,
 } from './tools.js';
 
 
@@ -192,10 +193,8 @@ export function executeToolByName(
   // All other tools throw "unknown tool" error
 
   if (name === 'smartsuite_intelligent') {
-    // Intelligent tool not yet implemented - placeholder for Phase 2G
-    return Promise.reject(new Error(
-      'smartsuite_intelligent not implemented - guided operations coming in Phase 2G',
-    ));
+    // Intelligent tool implementation (Phase 2G)
+    return executeIntelligentTool(params);
   } else if (name === 'smartsuite_undo') {
     // Undo tool implementation
     return executeUndoTool(params);

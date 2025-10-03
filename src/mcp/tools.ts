@@ -7,6 +7,7 @@
 
 import type { FieldTranslator } from '../core/field-translator.js';
 import { DiscoverHandler } from '../operations/discover-handler.js';
+import { IntelligentHandler } from '../operations/intelligent-handler.js';
 import { QueryHandler } from '../operations/query-handler.js';
 import { RecordHandler } from '../operations/record-handler.js';
 import { SchemaHandler } from '../operations/schema-handler.js';
@@ -545,6 +546,62 @@ export function executeUndoTool(params: Record<string, unknown>): Promise<never>
   // UndoHandler implementation pending - return placeholder
   // This allows tool layer tests to pass while handler is being developed
   return Promise.reject(new Error('UndoHandler not implemented - transaction rollback coming in Phase 2F'));
+}
+
+// ============================================================================
+// TOOL 6: smartsuite_intelligent - AI-guided operations with safety analysis
+// ============================================================================
+
+/**
+ * Execute intelligent tool
+ * Phase 2G: Intelligent handler with knowledge-base driven safety analysis
+ */
+export function executeIntelligentTool(params: Record<string, unknown>): Promise<unknown> {
+  // Parameter validation
+  validateRequiredParam(params, 'endpoint', 'string');
+  validateRequiredParam(params, 'method', 'string');
+  validateRequiredParam(params, 'operationDescription', 'string');
+
+  const endpoint = params.endpoint as string;
+  const method = params.method as string;
+  const operationDescription = params.operationDescription as string;
+
+  // Validate HTTP method
+  const validMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
+  if (!validMethods.includes(method)) {
+    throw new Error(`Invalid method "${method}". Must be one of: ${validMethods.join(', ')}`);
+  }
+
+  // Create intelligent handler
+  const handler = new IntelligentHandler();
+
+  // Build operation object for analysis (handle strict optional properties)
+  const operation: {
+    endpoint: string;
+    method: string;
+    operation_description: string;
+    payload?: Record<string, unknown>;
+    fieldTypes?: Record<string, string>;
+    tableId?: string;
+  } = {
+    endpoint,
+    method,
+    operation_description: operationDescription,
+  };
+
+  // Add optional properties only if they exist
+  if (params.payload !== undefined) {
+    operation.payload = params.payload as Record<string, unknown>;
+  }
+  if (params.fieldTypes !== undefined) {
+    operation.fieldTypes = params.fieldTypes as Record<string, string>;
+  }
+  if (params.tableId !== undefined) {
+    operation.tableId = params.tableId as string;
+  }
+
+  // Analyze operation and return guidance
+  return Promise.resolve(handler.analyze(operation));
 }
 
 // ============================================================================

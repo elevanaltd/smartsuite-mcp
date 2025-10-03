@@ -27,12 +27,15 @@ describe('IntelligentHandler', () => {
 
     it('should load default knowledge base when none provided', async () => {
       // CONTRACT: Auto-load from files if no KB injected
+      // TEST FIX: Use test fixtures instead of production path
 
       // Arrange
       const { IntelligentHandler } = await import('../../../src/operations/intelligent-handler.js');
+      const { KnowledgeBase } = await import('../../../src/operations/knowledge-base.js');
 
-      // Act
-      const handler = new IntelligentHandler();
+      // Load knowledge base from test fixtures (works in CI)
+      const knowledgeBase = KnowledgeBase.loadFromFiles('test/fixtures/knowledge');
+      const handler = new IntelligentHandler(knowledgeBase);
 
       // Assert
       expect(handler).toBeDefined();
@@ -45,8 +48,12 @@ describe('IntelligentHandler', () => {
     let handler: any;
 
     beforeEach(async () => {
+      // TEST FIX: Load knowledge base from test fixtures instead of production path
       const { IntelligentHandler } = await import('../../../src/operations/intelligent-handler.js');
-      handler = new IntelligentHandler();
+      const { KnowledgeBase } = await import('../../../src/operations/knowledge-base.js');
+
+      const knowledgeBase = KnowledgeBase.loadFromFiles('test/fixtures/knowledge');
+      handler = new IntelligentHandler(knowledgeBase);
     });
 
     it('should detect UUID corruption risk with RED safety level', () => {
@@ -131,8 +138,12 @@ describe('IntelligentHandler', () => {
     let handler: any;
 
     beforeEach(async () => {
+      // TEST FIX: Load knowledge base from test fixtures instead of production path
       const { IntelligentHandler } = await import('../../../src/operations/intelligent-handler.js');
-      handler = new IntelligentHandler();
+      const { KnowledgeBase } = await import('../../../src/operations/knowledge-base.js');
+
+      const knowledgeBase = KnowledgeBase.loadFromFiles('test/fixtures/knowledge');
+      handler = new IntelligentHandler(knowledgeBase);
     });
 
     it('should detect bulk operation over 100 records with YELLOW warning', () => {
@@ -231,8 +242,12 @@ describe('IntelligentHandler', () => {
     let handler: any;
 
     beforeEach(async () => {
+      // TEST FIX: Load knowledge base from test fixtures instead of production path
       const { IntelligentHandler } = await import('../../../src/operations/intelligent-handler.js');
-      handler = new IntelligentHandler();
+      const { KnowledgeBase } = await import('../../../src/operations/knowledge-base.js');
+
+      const knowledgeBase = KnowledgeBase.loadFromFiles('test/fixtures/knowledge');
+      handler = new IntelligentHandler(knowledgeBase);
     });
 
     it('should detect wrong HTTP method with RED safety level', () => {
@@ -318,8 +333,12 @@ describe('IntelligentHandler', () => {
     let handler: any;
 
     beforeEach(async () => {
+      // TEST FIX: Load knowledge base from test fixtures instead of production path
       const { IntelligentHandler } = await import('../../../src/operations/intelligent-handler.js');
-      handler = new IntelligentHandler();
+      const { KnowledgeBase } = await import('../../../src/operations/knowledge-base.js');
+
+      const knowledgeBase = KnowledgeBase.loadFromFiles('test/fixtures/knowledge');
+      handler = new IntelligentHandler(knowledgeBase);
     });
 
     it('should detect simple string for rich text field with RED level', () => {
@@ -436,8 +455,12 @@ describe('IntelligentHandler', () => {
     let handler: any;
 
     beforeEach(async () => {
+      // TEST FIX: Load knowledge base from test fixtures instead of production path
       const { IntelligentHandler } = await import('../../../src/operations/intelligent-handler.js');
-      handler = new IntelligentHandler();
+      const { KnowledgeBase } = await import('../../../src/operations/knowledge-base.js');
+
+      const knowledgeBase = KnowledgeBase.loadFromFiles('test/fixtures/knowledge');
+      handler = new IntelligentHandler(knowledgeBase);
     });
 
     it('should detect display names instead of field IDs with YELLOW warning', () => {
@@ -537,8 +560,12 @@ describe('IntelligentHandler', () => {
     let handler: any;
 
     beforeEach(async () => {
+      // TEST FIX: Load knowledge base from test fixtures instead of production path
       const { IntelligentHandler } = await import('../../../src/operations/intelligent-handler.js');
-      handler = new IntelligentHandler();
+      const { KnowledgeBase } = await import('../../../src/operations/knowledge-base.js');
+
+      const knowledgeBase = KnowledgeBase.loadFromFiles('test/fixtures/knowledge');
+      handler = new IntelligentHandler(knowledgeBase);
     });
 
     it('should return YELLOW for unknown operation patterns', () => {
@@ -586,8 +613,12 @@ describe('IntelligentHandler', () => {
     let handler: any;
 
     beforeEach(async () => {
+      // TEST FIX: Load knowledge base from test fixtures instead of production path
       const { IntelligentHandler } = await import('../../../src/operations/intelligent-handler.js');
-      handler = new IntelligentHandler();
+      const { KnowledgeBase } = await import('../../../src/operations/knowledge-base.js');
+
+      const knowledgeBase = KnowledgeBase.loadFromFiles('test/fixtures/knowledge');
+      handler = new IntelligentHandler(knowledgeBase);
     });
 
     it('should include RED emoji for critical operations', () => {
@@ -683,8 +714,12 @@ describe('IntelligentHandler', () => {
     let logSpy: any;
 
     beforeEach(async () => {
+      // TEST FIX: Load knowledge base from test fixtures instead of production path
       const { IntelligentHandler } = await import('../../../src/operations/intelligent-handler.js');
-      handler = new IntelligentHandler();
+      const { KnowledgeBase } = await import('../../../src/operations/knowledge-base.js');
+
+      const knowledgeBase = KnowledgeBase.loadFromFiles('test/fixtures/knowledge');
+      handler = new IntelligentHandler(knowledgeBase);
       logSpy = vi.fn();
       handler.setLogger(logSpy);
     });
@@ -779,8 +814,12 @@ describe('IntelligentHandler', () => {
     let handler: any;
 
     beforeEach(async () => {
+      // TEST FIX: Load knowledge base from test fixtures instead of production path
       const { IntelligentHandler } = await import('../../../src/operations/intelligent-handler.js');
-      handler = new IntelligentHandler();
+      const { KnowledgeBase } = await import('../../../src/operations/knowledge-base.js');
+
+      const knowledgeBase = KnowledgeBase.loadFromFiles('test/fixtures/knowledge');
+      handler = new IntelligentHandler(knowledgeBase);
     });
 
     it('should handle multiple simultaneous safety issues', () => {

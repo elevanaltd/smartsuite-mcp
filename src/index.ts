@@ -68,6 +68,7 @@ async function executeShutdown(
   serverInstance: Server,
   transport: StdioServerTransport,
 ): Promise<void> {
+  // eslint-disable-next-line no-console -- MCP lifecycle logging to stderr (doesn't interfere with STDIO)
   console.error(`Received ${signal} signal`);
 
   try {
@@ -81,6 +82,7 @@ async function executeShutdown(
     process.exit(0);
   } catch (err) {
     // Log to stderr and exit with failure code
+    // eslint-disable-next-line no-console -- MCP lifecycle logging to stderr (doesn't interfere with STDIO)
     console.error('Shutdown error:', err);
     process.exit(1);
   }
@@ -103,11 +105,11 @@ export function setupSignalHandlers(
 
   // For backwards compatibility and explicit registration, also register handlers here
   // FIX: BUG-1 - Use .once() to prevent double execution
-  const sigtermHandler = async () => {
+  const sigtermHandler = async (): Promise<void> => {
     await executeShutdown('SIGTERM', serverInstance, transport);
   };
 
-  const sigintHandler = async () => {
+  const sigintHandler = async (): Promise<void> => {
     await executeShutdown('SIGINT', serverInstance, transport);
   };
 
@@ -125,6 +127,7 @@ export function setupSignalHandlers(
  * CONTRACT: ENTRY-005 - Unhandled error handling
  */
 export function handleUncaughtException(error: Error): void {
+  // eslint-disable-next-line no-console -- MCP lifecycle logging to stderr (doesn't interfere with STDIO)
   console.error('Uncaught exception:', error);
   process.exit(1);
 }
@@ -134,6 +137,7 @@ export function handleUncaughtException(error: Error): void {
  * CONTRACT: ENTRY-006 - Unhandled rejection handling
  */
 export function handleUnhandledRejection(error: Error): void {
+  // eslint-disable-next-line no-console -- MCP lifecycle logging to stderr (doesn't interfere with STDIO)
   console.error('Unhandled rejection:', error);
   process.exit(1);
 }
@@ -156,6 +160,7 @@ process.once('SIGTERM', async () => {
   if (globalTransport) {
     await executeShutdown('SIGTERM', server, globalTransport);
   } else {
+    // eslint-disable-next-line no-console -- MCP lifecycle logging to stderr (doesn't interfere with STDIO)
     console.error('Received SIGTERM signal, but no transport available');
     process.exit(1);
   }
@@ -165,6 +170,7 @@ process.once('SIGINT', async () => {
   if (globalTransport) {
     await executeShutdown('SIGINT', server, globalTransport);
   } else {
+    // eslint-disable-next-line no-console -- MCP lifecycle logging to stderr (doesn't interfere with STDIO)
     console.error('Received SIGINT signal, but no transport available');
     process.exit(1);
   }
@@ -183,6 +189,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       // Connect server to transport
       await server.connect(globalTransport);
 
+      // eslint-disable-next-line no-console -- MCP lifecycle logging to stderr (doesn't interfere with STDIO)
       console.error('SmartSuite MCP Server is running');
     } catch (error) {
       if (error instanceof Error) {

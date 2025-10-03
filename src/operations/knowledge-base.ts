@@ -93,7 +93,7 @@ export class KnowledgeBase {
    */
   constructor(patterns: KnowledgePattern[], manifest?: Manifest) {
     this.patterns = patterns;
-    this.manifest = manifest || this.createDefaultManifest();
+    this.manifest = manifest ?? this.createDefaultManifest();
   }
 
   /**
@@ -106,7 +106,7 @@ export class KnowledgeBase {
     const __dirname = dirname(__filename);
 
     // Default to coordination/smartsuite-truth directory
-    const knowledgePath = basePath || join(__dirname, '../../../coordination/smartsuite-truth');
+    const knowledgePath = basePath ?? join(__dirname, '../../../coordination/smartsuite-truth');
     const manifestPath = join(knowledgePath, 'manifest.json');
 
     // Validate manifest exists
@@ -116,6 +116,7 @@ export class KnowledgeBase {
 
     // Load and parse manifest
     const manifestContent = readFileSync(manifestPath, 'utf-8');
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- JSON.parse returns any; validated immediately below
     const manifest: Manifest = JSON.parse(manifestContent);
 
     // Validate manifest structure

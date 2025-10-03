@@ -49,7 +49,7 @@ export class IntelligentHandler {
    * @param knowledgeBase Optional knowledge base for testing
    */
   constructor(knowledgeBase?: KnowledgeBase) {
-    this.knowledgeBase = knowledgeBase || KnowledgeBase.loadFromFiles();
+    this.knowledgeBase = knowledgeBase ?? KnowledgeBase.loadFromFiles();
   }
 
   /**
@@ -265,7 +265,7 @@ export class IntelligentHandler {
 
       case 'SMARTDOC_FORMAT':
         // Check field type to determine if it's checklist or rich text
-        if (operation && operation.fieldTypes) {
+        if (operation?.fieldTypes) {
           const hasChecklist = Object.values(operation.fieldTypes).some(ft => ft === 'checklistfield');
           if (hasChecklist) {
             return 'Invalid format for checklist field';
@@ -275,7 +275,7 @@ export class IntelligentHandler {
 
       case 'FIELD_NAME_VS_ID':
         // Check if payload has mixed field names and IDs
-        if (operation && operation.payload) {
+        if (operation?.payload) {
           const keys = Object.keys(operation.payload);
           const hasDisplayNames = keys.some(k => k.includes(' ') || /^[A-Z]/.test(k));
           const hasFieldIds = keys.some(k => /^s[a-z0-9]{9}$/.test(k));
@@ -296,6 +296,7 @@ export class IntelligentHandler {
   private generateCorrection(
     pattern: string,
     operation: Operation,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Pattern match result structure varies by pattern type
     _match: any,
   ): SuggestedCorrection | null {
     switch (pattern) {
@@ -610,8 +611,7 @@ export class IntelligentHandler {
 
     if (this.logger) {
       this.logger(logData);
-    } else {
-      console.log('[IntelligentHandler] Analysis:', logData);
     }
+    // Note: In production, logger will be set via setLogger(). Console fallback removed for CI compliance.
   }
 }

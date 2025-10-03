@@ -225,10 +225,13 @@ export function startServer(): void {
   setFieldTranslator(translator);
 
   // Log successful startup
+  // eslint-disable-next-line no-console -- MCP lifecycle logging to stderr (doesn't interfere with STDIO)
   console.error(
     `SmartSuite MCP Server started - ${packageJson.name} v${packageJson.version}`,
   );
+  // eslint-disable-next-line no-console -- MCP lifecycle logging to stderr (doesn't interfere with STDIO)
   console.error(`Workspace: ${config.workspaceId}`);
+  // eslint-disable-next-line no-console -- MCP lifecycle logging to stderr (doesn't interfere with STDIO)
   console.error(`API URL: ${config.apiUrl}`);
 }
 
@@ -240,6 +243,7 @@ export async function shutdownServer(
   _server: Server,
   transport?: Transport,
 ): Promise<void> {
+  // eslint-disable-next-line no-console -- MCP lifecycle logging to stderr (doesn't interfere with STDIO)
   console.error('Shutting down SmartSuite MCP Server...');
 
   // Close transport if provided
@@ -250,6 +254,7 @@ export async function shutdownServer(
   // MCP SDK Server doesn't have explicit close method
   // Cleanup is handled by transport closure and process exit
 
+  // eslint-disable-next-line no-console -- MCP lifecycle logging to stderr (doesn't interfere with STDIO)
   console.error('Shutdown complete');
 }
 
@@ -262,9 +267,11 @@ export async function shutdownServer(
  * CONTRACT: SERVER-010 - Error handling with context
  */
 export function handleError(error: Error): void {
+  // eslint-disable-next-line no-console -- MCP lifecycle logging to stderr (doesn't interfere with STDIO)
   console.error('SmartSuite MCP Server Error:', error);
 
   if (error.stack) {
+    // eslint-disable-next-line no-console -- MCP lifecycle logging to stderr (doesn't interfere with STDIO)
     console.error('Stack trace:', error.stack);
   }
 }

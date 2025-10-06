@@ -4,8 +4,7 @@
 // Critical-Engineer Analysis: 002-PHASE-2G-INTELLIGENT-TOOL-ANALYSIS.md
 
 import { readFileSync, existsSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
 
 /**
  * Safety level classification
@@ -102,11 +101,9 @@ export class KnowledgeBase {
    * @returns KnowledgeBase instance
    */
   static loadFromFiles(basePath?: string): KnowledgeBase {
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = dirname(__filename);
-
     // Default to coordination/smartsuite-truth directory
-    const knowledgePath = basePath ?? join(__dirname, '../../../coordination/smartsuite-truth');
+    // Go up one level from staging to find coordination directory (works in both local and CI)
+    const knowledgePath = basePath ?? join(process.cwd(), '../coordination/smartsuite-truth');
     const manifestPath = join(knowledgePath, 'manifest.json');
 
     // Validate manifest exists

@@ -872,128 +872,19 @@ describe('MCP Tool Layer', () => {
   });
 
   // ============================================================================
-  // TOOL 5: smartsuite_undo - Transaction history rollback
+  // TOOL REGISTRATION & INTEGRATION
   // ============================================================================
 
-  describe('smartsuite_undo tool', () => {
-    // Set up mock client for all delegation tests
-    beforeEach(async () => {
-      const { setToolsClient } = await import('../../../src/mcp/tools.js');
-
-      const mockClient = {
-        apiKey: 'test-key',
-        workspaceId: 'test-workspace',
-        listRecords: vi.fn(),
-        getRecord: vi.fn(),
-        createRecord: vi.fn(),
-        updateRecord: vi.fn(),
-        deleteRecord: vi.fn(),
-        getSchema: vi.fn(),
-        countRecords: vi.fn(),
-        request: vi.fn(),
-      };
-
-      setToolsClient(mockClient as any);
-    });
-
-    describe('MCP-TOOLS-017: Schema validation', () => {
-      it('should define MCP-compliant tool schema', async () => {
-        // CONTRACT: Undo tool requires transaction_id parameter
-
-        const { getToolSchemas } = await import('../../../src/mcp/tools.js');
-        const schemas = getToolSchemas();
-
-        const undoTool = schemas.find((t) => t.name === 'smartsuite_undo');
-        expect(undoTool).toBeDefined();
-
-        // Validate required transaction_id
-        expect(undoTool?.inputSchema.required).toContain('transaction_id');
-      });
-    });
-
-    describe('MCP-TOOLS-018: Parameter validation', () => {
-      it('should require transaction_id parameter', async () => {
-        // CONTRACT: transaction_id is mandatory for rollback
-
-        const { executeUndoTool } = await import('../../../src/mcp/tools.js');
-
-        expect(() =>
-          executeUndoTool({
-            // Missing transaction_id
-          }),
-        ).toThrow(/transaction_id.*required/i);
-      });
-
-      it('should validate transaction_id format', async () => {
-        // CONTRACT: transaction_id must be non-empty string
-
-        const { executeUndoTool } = await import('../../../src/mcp/tools.js');
-
-        expect(() =>
-          executeUndoTool({
-            transaction_id: '', // Empty string
-          }),
-        ).toThrow('transaction_id cannot be empty');
-      });
-    });
-
-    describe('MCP-TOOLS-019: Handler delegation', () => {
-      it('should delegate to UndoHandler for transaction rollback', async () => {
-        // CONTRACT: Undo operation reverses previous mutation
-        // NOTE: UndoHandler not yet implemented - test validates future behavior
-
-        const { executeUndoTool } = await import('../../../src/mcp/tools.js');
-
-        // Current implementation throws "not yet implemented"
-        // Future implementation will delegate to UndoHandler via DI
-        await expect(
-          executeUndoTool({
-            transaction_id: 'txn_123',
-          }),
-        ).rejects.toThrow('UndoHandler not implemented');
-      });
-    });
-
-    describe('MCP-TOOLS-020: Error handling', () => {
-      it('should propagate transaction not found errors', async () => {
-        // CONTRACT: Invalid transaction_id must return clear error
-        // NOTE: UndoHandler not yet implemented - test validates future behavior
-
-        const { executeUndoTool } = await import('../../../src/mcp/tools.js');
-
-        // Current implementation throws "not yet implemented"
-        // Future implementation will delegate to UndoHandler and propagate errors
-        await expect(
-          executeUndoTool({
-            transaction_id: 'txn_invalid',
-          }),
-        ).rejects.toThrow('UndoHandler not implemented');
-      });
-
-      it('should propagate already reversed transaction errors', async () => {
-        // CONTRACT: Prevent double-undo operations
-        // NOTE: UndoHandler not yet implemented - test validates future behavior
-
-        const { executeUndoTool } = await import('../../../src/mcp/tools.js');
-
-        // Current implementation throws "not yet implemented"
-        // Future implementation will delegate to UndoHandler and detect double-undo
-        await expect(
-          executeUndoTool({
-            transaction_id: 'txn_123',
-          }),
-        ).rejects.toThrow('UndoHandler not implemented');
-      });
-    });
-
+  describe('Tool registration', () => {
     describe('MCP-TOOLS-021: Tool registration', () => {
-      it('should register all 6 core MCP tools', async () => {
-        // CONTRACT: MCP server must expose all 6 tools to clients
+      it('should register all 7 MCP tools', async () => {
+        // CONTRACT: MCP server must expose all 7 tools to clients
+        // Phase 2J: 4 core tools (query, record, schema, discover) + intelligent + 2 field management tools (undo removed - no API support)
 
         const { getToolSchemas } = await import('../../../src/mcp/tools.js');
         const schemas = getToolSchemas();
 
-        expect(schemas).toHaveLength(8); // Phase 2J: Added field_create and field_update tools
+        expect(schemas).toHaveLength(7); // 4 core + intelligent + 2 field tools (undo removed)
 
         const toolNames = schemas.map((s) => s.name);
         expect(toolNames).toEqual([
@@ -1001,7 +892,6 @@ describe('MCP Tool Layer', () => {
           'smartsuite_record',
           'smartsuite_schema',
           'smartsuite_discover',
-          'smartsuite_undo',
           'smartsuite_intelligent',
           'smartsuite_field_create', // Phase 2J
           'smartsuite_field_update', // Phase 2J

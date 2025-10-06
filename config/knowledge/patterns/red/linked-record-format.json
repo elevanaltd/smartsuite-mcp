@@ -1,0 +1,76 @@
+{
+  "pattern_id": "RED_002",
+  "schema_version": "2.0.0",
+  "pattern": "LINKED_RECORD_FORMAT_ERROR",
+  "name": "Linked Record Format Requirement",
+  "safetyLevel": "RED",
+  "severity": "BLOCKING",
+  "category": "type_error",
+
+  "triggers": [
+    {
+      "condition": "record_operation",
+      "endpoint_match": "/records/",
+      "parameter_check": {
+        "path": "payload.linkedrecordfield",
+        "operator": "exists",
+        "value_type": "string"
+      }
+    }
+  ],
+
+  "failureModes": [
+    {
+      "description": "Providing linked record values as strings instead of arrays causes type validation errors",
+      "prevention": "Always use array format for linked record fields, even for single values",
+      "impact": "API returns type error: 'linked records must be arrays'. Operation fails completely, no partial success."
+    }
+  ],
+
+  "validationRules": [
+    {
+      "rule_type": "property_check",
+      "condition": "linkedrecordfield value is string OR linkedrecordfield value is not array",
+      "action": "BLOCK",
+      "message": "BLOCKING: Linked record fields require array format. Use [\"record_id\"] not \"record_id\", even for single values."
+    }
+  ],
+
+  "correction": {
+    "description": "Use array format for ALL linked record values",
+    "workflow": [
+      "1. Identify all linkedrecordfield fields in payload",
+      "2. Convert string values to single-element arrays",
+      "3. Ensure existing array values remain unchanged",
+      "4. Validate array contains only string record IDs"
+    ],
+    "example": {
+      "wrong": {
+        "project_id": "68a8ff5237fde0bf797c05b3"
+      },
+      "correct_single": {
+        "project_id": ["68a8ff5237fde0bf797c05b3"]
+      },
+      "correct_multiple": {
+        "assigned_to": ["user_id_1", "user_id_2", "user_id_3"]
+      }
+    },
+    "requirements": [
+      "MUST use array format for single values",
+      "MUST use array format for multiple values",
+      "Array items MUST be strings (record IDs)",
+      "Empty relationships use empty array []"
+    ]
+  },
+
+  "evidence": {
+    "incident_date": "2025-01",
+    "production_validated": true,
+    "source": "CRITICAL-FORMATS-TRUTH.md:69-95"
+  },
+
+  "metadata": {
+    "last_verified": "2025-10-06",
+    "frequency": "common_mistake"
+  }
+}

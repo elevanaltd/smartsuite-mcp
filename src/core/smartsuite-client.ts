@@ -276,7 +276,7 @@ export function createClient(apiKey: string, workspaceId: string, baseUrl: strin
     },
 
     async updateField(appId: string, fieldId: string, updates: Record<string, unknown>): Promise<unknown> {
-      return makeRequest(`/api/v1/applications/${appId}/change_field/${fieldId}/`, 'POST', updates);
+      return makeRequest(`/api/v1/applications/${appId}/change_field/`, 'PUT', { slug: fieldId, ...updates });
     },
   };
 }

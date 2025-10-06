@@ -1,0 +1,99 @@
+{
+  "pattern_id": "RED_006",
+  "schema_version": "2.0.0",
+  "pattern": "INCOMPLETE_CHOICES_UPDATE",
+  "name": "Incomplete Choices Array in Field Update",
+  "safetyLevel": "RED",
+  "severity": "BLOCKING",
+  "category": "data_loss",
+
+  "triggers": [
+    {
+      "condition": "field_update_operation",
+      "endpoint_match": "/change_field/",
+      "parameter_check": {
+        "path": "payload.params.choices",
+        "operator": "exists",
+        "array_length": "less_than_current_schema"
+      }
+    }
+  ],
+
+  "failureModes": [
+    {
+      "description": "Sending partial choices array in field update deletes omitted choices and loses data for records using them",
+      "prevention": "Always include ALL existing choices in update payload, even if only modifying one",
+      "impact": "Records using omitted choice values show empty/null. Data loss is immediate and silent - no warning given. Must restore from backup."
+    }
+  ],
+
+  "validationRules": [
+    {
+      "rule_type": "property_check",
+      "condition": "payload.params.choices.length < current_schema_choices.length",
+      "action": "BLOCK",
+      "message": "BLOCKING: Update payload contains fewer choices than current schema. This will DELETE omitted choices and LOSE DATA for records using them. MUST include ALL existing choices + any new ones."
+    }
+  ],
+
+  "correction": {
+    "description": "Retrieve complete choices array from schema, preserve all, then add/modify",
+    "workflow": [
+      "1. GET /applications/{appId}/ to retrieve current field structure",
+      "2. Extract complete choices[] array from field.params.choices",
+      "3. Count existing choices (e.g., 5 existing options)",
+      "4. Build update payload with ALL existing choices preserved",
+      "5. Add new choices to the array if needed",
+      "6. Modify labels/colors of existing choices if needed",
+      "7. Verify payload.params.choices.length >= original count",
+      "8. Send update with complete choices array"
+    ],
+    "example": {
+      "current_schema": {
+        "choices": [
+          {"value": "uuid_1", "label": "Active", "color": "#00FF00"},
+          {"value": "uuid_2", "label": "Pending", "color": "#FFFF00"},
+          {"value": "uuid_3", "label": "Completed", "color": "#0000FF"}
+        ]
+      },
+      "wrong_update": {
+        "params": {
+          "choices": [
+            {"value": "uuid_1", "label": "Active", "color": "#00FF00"}
+          ]
+        }
+      },
+      "correct_update": {
+        "params": {
+          "choices": [
+            {"value": "uuid_1", "label": "Active", "color": "#00FF00"},
+            {"value": "uuid_2", "label": "In Progress", "color": "#FF5733"},
+            {"value": "uuid_3", "label": "Completed", "color": "#0000FF"},
+            {"value": "uuid_4", "label": "New Status", "color": "#FF00FF"}
+          ]
+        }
+      }
+    },
+    "requirements": [
+      "MUST fetch current schema before updating",
+      "MUST count existing choices as validation baseline",
+      "MUST include ALL existing choices in update payload",
+      "CAN add new choices to the array",
+      "CAN modify labels/colors of existing choices",
+      "NEVER send payload with fewer choices than current schema"
+    ]
+  },
+
+  "evidence": {
+    "incident_date": "2025-09",
+    "production_validated": true,
+    "source": "CRITICAL-FORMATS-TRUTH.md:281-303"
+  },
+
+  "metadata": {
+    "last_verified": "2025-10-06",
+    "production_incidents": 1,
+    "most_dangerous": true,
+    "silent_failure": true
+  }
+}

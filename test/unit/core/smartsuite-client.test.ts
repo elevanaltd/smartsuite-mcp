@@ -1046,7 +1046,12 @@ describe('SmartSuiteClient - Authentication (AUTH-001, AUTH-002)', () => {
         throw new Error('Test setup failed: updateField call not found');
       }
       expect(fieldUpdateCall[0]).toContain('/api/v1/applications/app-123/change_field/');
-      expect(fieldUpdateCall[1]?.method).toBe('POST');
+      expect(fieldUpdateCall[0]).not.toContain('field_123'); // Field ID should NOT be in URL
+      expect(fieldUpdateCall[1]?.method).toBe('PUT');
+
+      // Assert - slug parameter included in request body
+      const requestBody = JSON.parse(fieldUpdateCall[1]?.body as string);
+      expect(requestBody).toHaveProperty('slug', 'field_123');
     });
 
     it('should include authentication headers in field operations', async () => {

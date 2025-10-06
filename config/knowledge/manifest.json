@@ -1,0 +1,77 @@
+{
+  "version": "2.0.0",
+  "api_compatibility": "v1",
+  "last_updated": "2025-10-06",
+  "structure_version": "machine_optimized_v2",
+  "description": "SmartSuite API safety pattern knowledge base for IntelligentHandler MCP tool",
+
+  "pattern_index": {
+    "red": [
+      {
+        "id": "RED_001",
+        "pattern": "UUID_CORRUPTION",
+        "name": "UUID Corruption in Status Fields",
+        "file": "patterns/red/uuid-corruption.json",
+        "safetyLevel": "RED"
+      },
+      {
+        "id": "RED_002",
+        "pattern": "LINKED_RECORD_FORMAT_ERROR",
+        "name": "Linked Record Format Requirement",
+        "file": "patterns/red/linked-record-format.json",
+        "safetyLevel": "RED"
+      },
+      {
+        "id": "RED_003",
+        "pattern": "SMARTDOC_FORMAT_ERROR",
+        "name": "SmartDoc Rich Text Format Requirement",
+        "file": "patterns/red/smartdoc-format.json",
+        "safetyLevel": "RED"
+      },
+      {
+        "id": "RED_004",
+        "pattern": "WRONG_FILTER_OPERATORS",
+        "name": "Filter Operator Requirements by Field Type",
+        "file": "patterns/red/filter-operators.json",
+        "safetyLevel": "RED"
+      },
+      {
+        "id": "RED_005",
+        "pattern": "STATUS_FIELD_VALUE_ERROR",
+        "name": "Status Field Value Format Requirement",
+        "file": "patterns/red/status-field-values.json",
+        "safetyLevel": "RED"
+      },
+      {
+        "id": "RED_006",
+        "pattern": "INCOMPLETE_CHOICES_UPDATE",
+        "name": "Incomplete Choices Array in Field Update",
+        "file": "patterns/red/incomplete-choices-update.json",
+        "safetyLevel": "RED"
+      }
+    ],
+    "yellow": [],
+    "green": []
+  },
+
+  "validation_rules": [],
+
+  "loading": {
+    "strategy": "eager",
+    "target_time": "<100ms",
+    "mcp_server_startup": true
+  },
+
+  "pattern_matching": {
+    "severity_priority": ["red", "yellow", "green"],
+    "citation_format": "pattern_id + pattern_name",
+    "interface_compliance": "IntelligentHandler KnowledgePattern interface"
+  },
+
+  "interface_requirements": {
+    "required_fields": ["pattern", "safetyLevel", "failureModes"],
+    "optional_fields": ["validationRules", "correction"],
+    "safetyLevel_values": ["RED", "YELLOW", "GREEN"],
+    "pattern_naming": "UPPERCASE_WITH_UNDERSCORES"
+  }
+}

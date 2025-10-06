@@ -19,9 +19,11 @@ PHOENIX_REBUILD_CONTEXT::[
     smartsuite_record[create+update+delete_operations],
     smartsuite_schema[table_structure_retrieval],
     smartsuite_discover[field_mapping_discovery],
-    smartsuite_undo[transaction_rollback],
-    smartsuite_knowledge[SmartDoc_formats+common_patterns]→OPTIONAL[knowledge_wrapper]
+    smartsuite_intelligent[AI_guided_operations+safety_analysis],
+    smartsuite_field_create[field_creation],
+    smartsuite_field_update[field_modification]
   ]
+  NOTE::"undo removed - SmartSuite API has no undo/rollback capability. Dry-run mode is the safety mechanism."
 
   PHASES::[
     Phase_0::Foundation_Setup[COMPLETE→quality_gates+TypeScript_strict+Vitest+CI],
@@ -156,7 +158,7 @@ CONTEXT_PHASES::[
   IMPACT_ANALYSIS::[
     DEPENDENCIES→import_graph_check
     TESTS→*.test.ts_coverage_search
-    TRANSACTIONS→undo_operation_impact
+    DRY_RUN_SAFETY→mutation_protection_verification
     FORMATS→SmartDoc/checklist_compatibility
   ]
 
@@ -204,7 +206,7 @@ WORKFLOW::[
     tests_for_new_features
     dry_run_true_first
     test_table_verification_before_production
-    transaction_history_undo_compatibility
+    mutation_safety_verification
   ]
 
   DOCUMENTATION::[

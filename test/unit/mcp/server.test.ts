@@ -319,18 +319,22 @@ describe('MCP Server', () => {
         ).rejects.toThrow(/not implemented/i);
       });
 
-      it('should route smartsuite_intelligent to placeholder', async () => {
-        // CONTRACT: Placeholder for Phase 2G implementation
+      it('should route smartsuite_intelligent to IntelligentHandler', async () => {
+        // CONTRACT: Phase 2G - Route to intelligent handler for safety analysis
 
         const { executeToolByName } = await import('../../../src/mcp/server.js');
 
-        await expect(
-          executeToolByName('smartsuite_intelligent', {
-            endpoint: '/test',
-            method: 'GET',
-            operationDescription: 'test',
-          }),
-        ).rejects.toThrow(/not implemented/i);
+        const result = await executeToolByName('smartsuite_intelligent', {
+          endpoint: '/test',
+          method: 'GET',
+          operationDescription: 'test',
+        });
+
+        // Should return AnalysisResult structure
+        expect(result).toHaveProperty('safety_level');
+        expect(result).toHaveProperty('warnings');
+        expect(result).toHaveProperty('blockers');
+        expect(result).toHaveProperty('guidance');
       });
 
       it('should reject unknown tool names', async () => {
@@ -450,7 +454,7 @@ describe('MCP Server', () => {
 
         const { executeToolByName } = await import('../../../src/mcp/server.js');
 
-        // Force an error condition
+        // Force an error condition - missing required parameters
         await expect(
           executeToolByName('smartsuite_intelligent', { invalid: 'params' }),
         ).rejects.toThrow();

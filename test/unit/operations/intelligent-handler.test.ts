@@ -59,6 +59,7 @@ describe('IntelligentHandler', () => {
     it('should detect UUID corruption risk with RED safety level', () => {
       // CONTRACT: Detect "options" vs "choices" disaster (EAV September 2025 incident)
       // CRITICAL-ENGINEER: "UUID corruption detection" - SAFETY CHECK #1
+      // FIX: Use actual SmartSuite API structure (payload.params.options) per CRITICAL-FORMATS-TRUTH.md
 
       // Arrange
       const operation = {
@@ -68,7 +69,9 @@ describe('IntelligentHandler', () => {
         payload: {
           field_type: 'singleselectfield',
           slug: 'status_field',
-          options: ['New Status', 'Another Status'], // ⚠️ DESTROYS UUIDs
+          params: {
+            options: ['New Status', 'Another Status'], // ⚠️ DESTROYS UUIDs
+          },
         },
       };
 
@@ -85,6 +88,7 @@ describe('IntelligentHandler', () => {
 
     it('should provide correction for UUID corruption', () => {
       // CONTRACT: Suggest using "choices" parameter with preserved UUIDs
+      // FIX: Use actual SmartSuite API structure (payload.params.options) per CRITICAL-FORMATS-TRUTH.md
 
       // Arrange
       const operation = {
@@ -93,7 +97,9 @@ describe('IntelligentHandler', () => {
         operation_description: 'Update status field',
         payload: {
           field_type: 'singleselectfield',
-          options: ['Status 1'],
+          params: {
+            options: ['Status 1'],
+          },
         },
       };
 
@@ -105,12 +111,14 @@ describe('IntelligentHandler', () => {
       expect(result.suggested_corrections.length).toBeGreaterThan(0);
       expect(result.suggested_corrections[0].issue).toContain('options');
       expect(result.suggested_corrections[0].fix).toContain('choices');
-      expect(result.suggested_corrections[0].corrected_payload).toHaveProperty('choices');
-      expect(result.suggested_corrections[0].corrected_payload).not.toHaveProperty('options');
+      // FIX: Check for nested params.choices structure (actual API format)
+      expect(result.suggested_corrections[0].corrected_payload).toHaveProperty('params.choices');
+      expect(result.suggested_corrections[0].corrected_payload).not.toHaveProperty('params.options');
     });
 
     it('should pass when using correct "choices" parameter', () => {
       // CONTRACT: GREEN when choices parameter used correctly
+      // FIX: Use actual SmartSuite API structure (payload.params.choices) per CRITICAL-FORMATS-TRUTH.md
 
       // Arrange
       const operation = {
@@ -119,9 +127,11 @@ describe('IntelligentHandler', () => {
         operation_description: 'Update status field correctly',
         payload: {
           field_type: 'singleselectfield',
-          choices: [
-            { value: 'existing_uuid_1', label: 'Status 1' },
-          ],
+          params: {
+            choices: [
+              { value: 'existing_uuid_1', label: 'Status 1' },
+            ],
+          },
         },
       };
 
@@ -623,6 +633,7 @@ describe('IntelligentHandler', () => {
 
     it('should include RED emoji for critical operations', () => {
       // CONTRACT: Use 🔴 for RED safety level
+      // FIX: Use actual SmartSuite API structure (payload.params.options) per CRITICAL-FORMATS-TRUTH.md
 
       // Arrange
       const operation = {
@@ -631,7 +642,9 @@ describe('IntelligentHandler', () => {
         operation_description: 'Critical operation',
         payload: {
           field_type: 'singleselectfield',
-          options: ['Test'],
+          params: {
+            options: ['Test'],
+          },
         },
       };
 
@@ -792,13 +805,19 @@ describe('IntelligentHandler', () => {
 
     it('should support custom log level based on safety', () => {
       // CONTRACT: ERROR for RED, WARN for YELLOW, INFO for GREEN
+      // FIX: Use actual SmartSuite API structure (payload.params.options) per CRITICAL-FORMATS-TRUTH.md
 
       // Arrange
       const redOperation = {
         endpoint: '/applications/123/change_field/',
         method: 'PUT' as const,
         operation_description: 'Critical',
-        payload: { field_type: 'singleselectfield', options: ['Test'] },
+        payload: {
+          field_type: 'singleselectfield',
+          params: {
+            options: ['Test'],
+          },
+        },
       };
 
       // Act

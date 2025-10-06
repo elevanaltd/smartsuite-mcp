@@ -241,12 +241,14 @@ export class KnowledgeBase {
 
         // Basic validation
         if (!pattern.pattern || !pattern.safetyLevel || !pattern.failureModes) {
+          // eslint-disable-next-line no-console -- Operational diagnostic: pattern validation during knowledge base loading
           console.warn(`Skipping malformed pattern at ${patternPath}: missing required fields`);
           continue;
         }
 
         richPatterns.push(pattern);
       } else {
+        // eslint-disable-next-line no-console -- Operational diagnostic: pattern file discovery during knowledge base loading
         console.warn(`Pattern file not found: ${patternPath}`);
       }
     }
@@ -260,6 +262,7 @@ export class KnowledgeBase {
         const pattern: RichKnowledgePattern = JSON.parse(patternContent);
 
         if (!pattern.pattern || !pattern.safetyLevel || !pattern.failureModes) {
+          // eslint-disable-next-line no-console -- Operational diagnostic: pattern validation during knowledge base loading
           console.warn(`Skipping malformed pattern at ${patternPath}: missing required fields`);
           continue;
         }
@@ -277,6 +280,7 @@ export class KnowledgeBase {
         const pattern: RichKnowledgePattern = JSON.parse(patternContent);
 
         if (!pattern.pattern || !pattern.safetyLevel || !pattern.failureModes) {
+          // eslint-disable-next-line no-console -- Operational diagnostic: pattern validation during knowledge base loading
           console.warn(`Skipping malformed pattern at ${patternPath}: missing required fields`);
           continue;
         }
@@ -557,6 +561,7 @@ export class KnowledgeBase {
       case 'not_exists':
         return value === undefined || value === null;
       default:
+        // eslint-disable-next-line no-console -- Operational diagnostic: operator validation during pattern matching
         console.warn(`Unknown operator: ${operator}`);
         return false;
     }

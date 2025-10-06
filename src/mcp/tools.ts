@@ -7,6 +7,7 @@
 
 import type { FieldTranslator } from '../core/field-translator.js';
 import { DiscoverHandler } from '../operations/discover-handler.js';
+import { IntelligentHandler } from '../operations/intelligent-handler.js';
 import { QueryHandler } from '../operations/query-handler.js';
 import { RecordHandler } from '../operations/record-handler.js';
 import { SchemaHandler } from '../operations/schema-handler.js';
@@ -549,26 +550,47 @@ export function executeUndoTool(params: Record<string, unknown>): Promise<never>
 
 /**
  * Execute intelligent tool operation
- * CONTRACT: INTELLIGENT-001 - AI-guided operation placeholder
- * Phase 2G: Placeholder until intelligent handler implementation complete
+ * CONTRACT: INTELLIGENT-001 - AI-guided safety analysis
+ * Phase 2G: IntelligentHandler integration for operation analysis
  *
  * Critical-Engineer: consulted for Architecture pattern selection (direct routing vs facade)
  */
-export function executeIntelligentTool(params: Record<string, unknown>): Promise<never> {
-  // Validate required parameters for intelligent tool contract
+export function executeIntelligentTool(params: Record<string, unknown>): Promise<unknown> {
+  // Wrap in try-catch to convert synchronous validation errors to Promise rejection
   try {
+    // Validate required parameters for intelligent tool contract
     validateRequiredParam(params, 'endpoint', 'string');
     validateRequiredParam(params, 'method', 'string');
     validateRequiredParam(params, 'operationDescription', 'string');
+
+    // Create handler and analyze operation
+    const handler = new IntelligentHandler();
+
+    // Build operation object with only defined properties (exactOptionalPropertyTypes compliance)
+    const operation: {
+      endpoint: string;
+      method: string;
+      operation_description: string;
+      payload?: Record<string, unknown>;
+      tableId?: string;
+    } = {
+      endpoint: params.endpoint as string,
+      method: params.method as string,
+      operation_description: params.operationDescription as string,
+    };
+
+    // Only add optional properties if they exist
+    if (params.payload !== undefined) {
+      operation.payload = params.payload as Record<string, unknown>;
+    }
+    if (params.tableId !== undefined) {
+      operation.tableId = params.tableId as string;
+    }
+
+    return Promise.resolve(handler.analyze(operation));
   } catch (error) {
-    // Convert synchronous validation errors to Promise rejection
     return Promise.reject(error);
   }
-
-  // Phase 2G placeholder - guided operations coming in next implementation step
-  return Promise.reject(new Error(
-    'smartsuite_intelligent not implemented - guided operations coming in Phase 2G',
-  ));
 }
 
 // ============================================================================

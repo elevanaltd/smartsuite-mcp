@@ -993,7 +993,7 @@ describe('MCP Tool Layer', () => {
         const { getToolSchemas } = await import('../../../src/mcp/tools.js');
         const schemas = getToolSchemas();
 
-        expect(schemas).toHaveLength(6);
+        expect(schemas).toHaveLength(8); // Phase 2J: Added field_create and field_update tools
 
         const toolNames = schemas.map((s) => s.name);
         expect(toolNames).toEqual([
@@ -1003,6 +1003,8 @@ describe('MCP Tool Layer', () => {
           'smartsuite_discover',
           'smartsuite_undo',
           'smartsuite_intelligent',
+          'smartsuite_field_create', // Phase 2J
+          'smartsuite_field_update', // Phase 2J
         ]);
       });
     });
@@ -1022,6 +1024,8 @@ describe('MCP Tool Layer', () => {
           getSchema: vi.fn(),
           countRecords: vi.fn(),
           request: vi.fn(),
+          addField: vi.fn(),
+          updateField: vi.fn(),
         };
 
         const { setToolsClient } = await import('../../../src/mcp/tools.js');

@@ -7,6 +7,8 @@
 
 import type { FieldTranslator } from '../core/field-translator.js';
 import { DiscoverHandler } from '../operations/discover-handler.js';
+import { FieldHandler } from '../operations/field-handler.js';
+import type { FieldConfig } from '../operations/field-handler.js';
 import { IntelligentHandler } from '../operations/intelligent-handler.js';
 import { KnowledgeBase } from '../operations/knowledge-base.js';
 import { QueryHandler } from '../operations/query-handler.js';
@@ -62,6 +64,7 @@ interface HandlerDependencies {
   recordHandler?: RecordHandler;
   schemaHandler?: SchemaHandler;
   discoverHandler?: DiscoverHandler;
+  fieldHandler?: FieldHandler;
 }
 
 let handlerDependencies: HandlerDependencies = {};
@@ -104,7 +107,7 @@ export function resetHandlerDependencies(): void {
 
 /**
  * Get all MCP tool schemas for registration
- * CONTRACT: MCP-TOOLS-021 - Must register all 5 core tools
+ * CONTRACT: MCP-TOOLS-021 - Must register all core tools (query, record, schema, discover, undo, intelligent, field_create, field_update)
  */
 export function getToolSchemas(): ToolSchema[] {
   return [
@@ -263,6 +266,75 @@ export function getToolSchemas(): ToolSchema[] {
           },
         },
         required: ['endpoint', 'method', 'operationDescription'],
+      },
+    },
+    {
+      name: 'smartsuite_field_create',
+      description: 'Create new field in SmartSuite table with format validation and UUID corruption prevention. Defaults to dry_run=true for safety.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          tableId: {
+            type: 'string',
+            description: 'SmartSuite application ID (24-char hex)',
+          },
+          fieldConfig: {
+            type: 'object',
+            description: 'Field configuration object',
+            properties: {
+              field_type: {
+                type: 'string',
+                description: 'Field type (e.g., textfield, numberfield, singleselectfield)',
+              },
+              label: {
+                type: 'string',
+                description: 'Field display label',
+              },
+              slug: {
+                type: 'string',
+                description: 'Field slug (unique identifier)',
+              },
+              params: {
+                type: 'object',
+                description: 'Optional field-specific parameters (use "choices" not "options" for select fields)',
+              },
+            },
+            required: ['field_type', 'label', 'slug'],
+          },
+          dryRun: {
+            type: 'boolean',
+            default: true,
+            description: 'Preview mode (default: true) - prevents accidental schema modifications',
+          },
+        },
+        required: ['tableId', 'fieldConfig'],
+      },
+    },
+    {
+      name: 'smartsuite_field_update',
+      description: 'Update existing field in SmartSuite table. CRITICAL: Use "choices" not "options" to prevent UUID corruption. Defaults to dry_run=true for safety.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          tableId: {
+            type: 'string',
+            description: 'SmartSuite application ID (24-char hex)',
+          },
+          fieldId: {
+            type: 'string',
+            description: 'Field ID to update',
+          },
+          updates: {
+            type: 'object',
+            description: 'Field updates object (use "choices" not "options" for select field options)',
+          },
+          dryRun: {
+            type: 'boolean',
+            default: true,
+            description: 'Preview mode (default: true) - prevents accidental schema modifications',
+          },
+        },
+        required: ['tableId', 'fieldId', 'updates'],
       },
     },
   ];
@@ -600,8 +672,254 @@ export function executeIntelligentTool(params: Record<string, unknown>): Promise
 }
 
 // ============================================================================
+// TOOL 7: smartsuite_field_create - Create new field
+// ============================================================================
+
+/**
+ * Execute field create tool
+ * CONTRACT: MCP-FIELD-001 to MCP-FIELD-005
+ * Phase 2J: Field management tools for schema evolution
+ */
+export async function executeFieldCreateTool(
+  params: Record<string, unknown>,
+): Promise<{ content: Array<{ type: string; text: string }>; isError: boolean }> {
+  try {
+    // Parameter validation (CONTRACT: MCP-FIELD-002)
+    validateRequiredParam(params, 'tableId', 'string');
+
+    if (!params.fieldConfig || typeof params.fieldConfig !== 'object') {
+      throw new Error('fieldConfig is required and must be an object');
+    }
+
+    const tableId = params.tableId as string;
+    const fieldConfig = params.fieldConfig as Record<string, unknown>;
+
+    // Validate nested fieldConfig properties
+    if (!fieldConfig.field_type || typeof fieldConfig.field_type !== 'string') {
+      throw new Error('field_type is required in fieldConfig');
+    }
+    if (!fieldConfig.label || typeof fieldConfig.label !== 'string') {
+      throw new Error('label is required in fieldConfig');
+    }
+    if (!fieldConfig.slug || typeof fieldConfig.slug !== 'string') {
+      throw new Error('slug is required in fieldConfig');
+    }
+
+    // Validate field_type against known SmartSuite types
+    const validTypes = [
+      'textfield',
+      'numberfield',
+      'singleselectfield',
+      'multipleselectfield',
+      'datefield',
+      'emailfield',
+      'phonefield',
+      'urlfield',
+      'checkboxfield',
+      'textareafield',
+      'richtextareafield',
+      'checklistfield',
+      'formulafield',
+      'linkedrecordfield',
+      'duedatefield',
+      'timefield',
+      'ratingfield',
+      'currencyfield',
+      'percentfield',
+      'autoincrement',
+      'filefield',
+      'signaturefield',
+      'userfield',
+      'statusfield',
+      'votefield',
+    ];
+
+    if (!validTypes.includes(fieldConfig.field_type as string)) {
+      throw new Error(`Invalid field type "${fieldConfig.field_type}". Must be a valid SmartSuite field type.`);
+    }
+
+    // Check authentication
+    if (!smartsuiteClient) {
+      throw new Error('Authentication required: SmartSuite client not initialized');
+    }
+
+    // Default dry_run=true for safety (CONTRACT: MCP-FIELD-001)
+    const dryRun = params.dryRun ?? true;
+
+    // Delegate to FieldHandler (CONTRACT: MCP-FIELD-003)
+    const handler = handlerDependencies.fieldHandler ?? new FieldHandler();
+    if (!handlerDependencies.fieldHandler) {
+      handler.setClient(smartsuiteClient);
+    }
+
+    const result = await handler.execute({
+      operation: 'create',
+      tableId,
+      fieldConfig: fieldConfig as FieldConfig,
+      dryRun: dryRun as boolean,
+    });
+
+    // Transform to MCP format (CONTRACT: MCP-FIELD-004)
+    const resultData = result as { dryRun?: boolean; field?: { id?: string }; preview?: unknown };
+    let responseText: string;
+
+    if (resultData.dryRun) {
+      responseText = `DRY RUN: Field creation preview\n${JSON.stringify(resultData.preview ?? resultData, null, 2)}`;
+    } else {
+      const fieldId = resultData.field?.id ?? 'unknown';
+      responseText = `Field created successfully: ${fieldId}\n${JSON.stringify(resultData.field, null, 2)}`;
+    }
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: responseText,
+        },
+      ],
+      isError: false,
+    };
+  } catch (error) {
+    // Transform errors to MCP format (CONTRACT: MCP-FIELD-005)
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: errorMessage,
+        },
+      ],
+      isError: true,
+    };
+  }
+}
+
+// ============================================================================
+// TOOL 8: smartsuite_field_update - Update existing field
+// ============================================================================
+
+/**
+ * Execute field update tool
+ * CONTRACT: MCP-FIELD-006 to MCP-FIELD-011
+ * CRITICAL: UUID corruption prevention at tool boundary
+ */
+export async function executeFieldUpdateTool(
+  params: Record<string, unknown>,
+): Promise<{ content: Array<{ type: string; text: string }>; isError: boolean }> {
+  try {
+    // Parameter validation (CONTRACT: MCP-FIELD-007)
+    validateRequiredParam(params, 'tableId', 'string');
+    validateRequiredParam(params, 'fieldId', 'string');
+
+    if (!params.updates || typeof params.updates !== 'object') {
+      throw new Error('updates is required and must be an object');
+    }
+
+    const tableId = params.tableId as string;
+    const fieldId = params.fieldId as string;
+    const updates = params.updates as Record<string, unknown>;
+
+    // CRITICAL: UUID corruption prevention at tool boundary (CONTRACT: MCP-FIELD-008)
+    // Defense-in-depth: Tool-level validation before handler execution
+    // Critical-Engineer: consulted for architectural validation placement
+    validateFieldUpdateParameters(updates);
+
+    // Check authentication
+    if (!smartsuiteClient) {
+      throw new Error('Authentication required: SmartSuite client not initialized');
+    }
+
+    // Default dry_run=true for safety (CONTRACT: MCP-FIELD-006)
+    const dryRun = params.dryRun ?? true;
+
+    // Delegate to FieldHandler (CONTRACT: MCP-FIELD-009)
+    const handler = handlerDependencies.fieldHandler ?? new FieldHandler();
+    if (!handlerDependencies.fieldHandler) {
+      handler.setClient(smartsuiteClient);
+    }
+
+    const result = await handler.execute({
+      operation: 'update',
+      tableId,
+      fieldId,
+      updates,
+      dryRun: dryRun as boolean,
+    });
+
+    // Transform to MCP format (CONTRACT: MCP-FIELD-010)
+    const resultData = result as { dryRun?: boolean; field?: { id?: string }; preview?: unknown };
+    let responseText: string;
+
+    if (resultData.dryRun) {
+      responseText = `DRY RUN: Field update preview\n${JSON.stringify(resultData.preview ?? resultData, null, 2)}`;
+    } else {
+      const updatedFieldId = resultData.field?.id ?? fieldId;
+      responseText = `Field updated successfully: ${updatedFieldId}\n${JSON.stringify(resultData.field, null, 2)}`;
+    }
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: responseText,
+        },
+      ],
+      isError: false,
+    };
+  } catch (error) {
+    // Transform errors to MCP format (CONTRACT: MCP-FIELD-011)
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: errorMessage,
+        },
+      ],
+      isError: true,
+    };
+  }
+}
+
+// ============================================================================
 // SHARED UTILITIES
 // ============================================================================
+
+/**
+ * CRITICAL: UUID Corruption Prevention
+ *
+ * Validates that field update parameters use "choices" not "options" for select fields.
+ * Using "options" instead of "choices" corrupts existing UUIDs, breaking all linked records.
+ *
+ * @param updates - Field update object to validate (recursively searches nested objects)
+ * @throws {Error} If dangerous "options" parameter detected at any nesting level
+ *
+ * Critical-Engineer: consulted for tool-level UUID corruption prevention (data integrity gate)
+ * Defense-in-depth: Tool boundary validation + Handler validation + Client validation
+ */
+function validateFieldUpdateParameters(updates: Record<string, unknown>): void {
+  /**
+   * Recursively detect "options" parameter in nested structures
+   * Must search deeply because params.options can be hidden in nested config objects
+   */
+  function detectOptionsParameter(obj: Record<string, unknown>, path = ''): void {
+    for (const [key, value] of Object.entries(obj)) {
+      if (key === 'options') {
+        throw new Error(
+          'CRITICAL: Use "choices" parameter instead of "options" for select fields. ' +
+            `Found "options" at ${path || 'root level'}. ` +
+            'Using "options" corrupts existing UUIDs and breaks all linked records. ' +
+            'This is a production data integrity violation.',
+        );
+      }
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        detectOptionsParameter(value as Record<string, unknown>, path ? `${path}.${key}` : key);
+      }
+    }
+  }
+
+  detectOptionsParameter(updates);
+}
 
 /**
  * Validate required parameter exists and has correct type

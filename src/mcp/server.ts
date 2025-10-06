@@ -2,6 +2,10 @@
 // Contract: SERVER-001 to SERVER-010 (29 test contracts)
 // TDD Phase: GREEN (minimal implementation to pass RED tests)
 // Architecture: Server → Tools → Handlers → Client → API
+//
+// Critical-Engineer: consulted for architectural validation for field management tools
+// CRITICAL: UUID corruption prevention enforced at tool boundary, not just handler
+// Defense-in-depth strategy: Validation at MCP layer + Handler layer + Client layer
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import {
@@ -23,6 +27,8 @@ import {
   executeDiscoverTool,
   executeUndoTool,
   executeIntelligentTool,
+  executeFieldCreateTool,
+  executeFieldUpdateTool,
 } from './tools.js';
 
 
@@ -190,7 +196,7 @@ export function executeToolByName(
   name: string,
   params: Record<string, unknown>,
 ): Promise<unknown> {
-  // Phase 2G Revised: Direct routing to all 6 tool handlers
+  // Phase 2J: Direct routing to all 8 tool handlers (6 core + 2 field tools)
   switch (name) {
     case 'smartsuite_query':
       return executeQueryTool(params);
@@ -210,9 +216,15 @@ export function executeToolByName(
     case 'smartsuite_intelligent':
       return executeIntelligentTool(params);
 
+    case 'smartsuite_field_create':
+      return executeFieldCreateTool(params);
+
+    case 'smartsuite_field_update':
+      return executeFieldUpdateTool(params);
+
     default:
       return Promise.reject(new Error(
-        `Unknown tool: ${name}. Registered tools: smartsuite_query, smartsuite_record, smartsuite_schema, smartsuite_discover, smartsuite_undo, smartsuite_intelligent`,
+        `Unknown tool: ${name}. Registered tools: smartsuite_query, smartsuite_record, smartsuite_schema, smartsuite_discover, smartsuite_undo, smartsuite_intelligent, smartsuite_field_create, smartsuite_field_update`,
       ));
   }
 }

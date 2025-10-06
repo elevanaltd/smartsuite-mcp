@@ -192,11 +192,11 @@ describe('MCP Server', () => {
         const { getRegisteredTools } = await import('../../../src/mcp/server.js');
         const tools = getRegisteredTools();
 
-        expect(tools).toHaveLength(6);
+        expect(tools).toHaveLength(8); // Phase 2J: Added field_create and field_update tools
       });
 
-      it('should register all 6 core tools', async () => {
-        // CONTRACT: All tools accessible without facade layer
+      it('should register all 8 core tools', async () => {
+        // CONTRACT: All tools accessible without facade layer (Phase 2J: 6 + 2 field tools)
 
         const { getRegisteredTools } = await import('../../../src/mcp/server.js');
         const tools = getRegisteredTools();
@@ -208,6 +208,8 @@ describe('MCP Server', () => {
         expect(toolNames).toContain('smartsuite_discover');
         expect(toolNames).toContain('smartsuite_undo');
         expect(toolNames).toContain('smartsuite_intelligent');
+        expect(toolNames).toContain('smartsuite_field_create');
+        expect(toolNames).toContain('smartsuite_field_update');
       });
     });
 
@@ -335,6 +337,47 @@ describe('MCP Server', () => {
         expect(result).toHaveProperty('warnings');
         expect(result).toHaveProperty('blockers');
         expect(result).toHaveProperty('guidance');
+      });
+
+      it('should route smartsuite_field_create to handler', async () => {
+        // CONTRACT: Phase 2J - Field creation tool routing
+        // NOTE: Field tools return MCP format with isError instead of throwing
+
+        const { executeToolByName } = await import('../../../src/mcp/server.js');
+
+        const result = await executeToolByName('smartsuite_field_create', {
+          tableId: 'test-table-id',
+          fieldConfig: {
+            field_type: 'textfield',
+            label: 'Test',
+            slug: 'test',
+          },
+        });
+
+        // Field tools return MCP format with authentication error
+        expect(result).toHaveProperty('isError', true);
+        expect(result).toHaveProperty('content');
+        const content = (result as { content: Array<{ text: string }> }).content;
+        expect(content[0]?.text).toMatch(/authentication|client/i);
+      });
+
+      it('should route smartsuite_field_update to handler', async () => {
+        // CONTRACT: Phase 2J - Field update tool routing
+        // NOTE: Field tools return MCP format with isError instead of throwing
+
+        const { executeToolByName } = await import('../../../src/mcp/server.js');
+
+        const result = await executeToolByName('smartsuite_field_update', {
+          tableId: 'test-table-id',
+          fieldId: 'field_123',
+          updates: { label: 'Updated' },
+        });
+
+        // Field tools return MCP format with authentication error
+        expect(result).toHaveProperty('isError', true);
+        expect(result).toHaveProperty('content');
+        const content = (result as { content: Array<{ text: string }> }).content;
+        expect(content[0]?.text).toMatch(/authentication|client/i);
       });
 
       it('should reject unknown tool names', async () => {

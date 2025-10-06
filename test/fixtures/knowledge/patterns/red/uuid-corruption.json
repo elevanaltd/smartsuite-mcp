@@ -1,0 +1,98 @@
+{
+  "pattern_id": "RED_001",
+  "schema_version": "2.0.0",
+  "pattern": "UUID_CORRUPTION",
+  "name": "UUID Corruption in Status Fields",
+  "safetyLevel": "RED",
+  "severity": "BLOCKING",
+  "category": "data_loss",
+
+  "triggers": [
+    {
+      "condition": "field_update_operation",
+      "endpoint_match": "/change_field/",
+      "parameter_check": {
+        "path": "payload.params.options",
+        "operator": "exists",
+        "AND": {
+          "path": "payload.params.choices",
+          "operator": "not_exists"
+        }
+      }
+    }
+  ],
+
+  "failureModes": [
+    {
+      "description": "Using 'options' parameter instead of 'choices' destroys ALL existing status field UUIDs permanently",
+      "prevention": "Always use 'choices' parameter with complete UUID preservation - include ALL existing choices in update payload",
+      "impact": "ALL records in table show empty/null status values. Data relationships break. Emergency restoration required. Real incident September 2025."
+    }
+  ],
+
+  "validationRules": [
+    {
+      "rule_type": "property_check",
+      "condition": "payload.params.options exists AND payload.params.choices not exists",
+      "action": "BLOCK",
+      "message": "BLOCKING: Using 'options' parameter destroys ALL status UUIDs. Use 'choices' array instead to preserve existing UUIDs. MUST include ALL existing choices + any new ones."
+    }
+  ],
+
+  "correction": {
+    "description": "Use 'choices' array with complete UUID preservation protocol",
+    "workflow": [
+      "1. GET /applications/{appId}/ to retrieve current field schema",
+      "2. Extract complete choices[] array from field structure",
+      "3. Preserve ALL existing choice objects (value, label, color)",
+      "4. Add new choices to the array or modify existing labels/colors",
+      "5. Send complete choices array in update payload"
+    ],
+    "example": {
+      "method": "PUT",
+      "endpoint": "/applications/{appId}/change_field/",
+      "payload": {
+        "slug": "status_field",
+        "field_type": "statusfield",
+        "label": "Status",
+        "params": {
+          "choices": [
+            {
+              "value": "existing_uuid_1",
+              "label": "Active",
+              "color": "#00FF00"
+            },
+            {
+              "value": "existing_uuid_2",
+              "label": "Updated Label",
+              "color": "#FF5733"
+            },
+            {
+              "value": "new_uuid_3",
+              "label": "New Status",
+              "color": "#0000FF"
+            }
+          ]
+        }
+      }
+    },
+    "requirements": [
+      "MUST fetch current schema before updating",
+      "MUST preserve ALL existing choice UUIDs",
+      "MUST use 'choices' parameter, NEVER 'options'",
+      "MUST include complete choice object (value, label, color) for each option"
+    ]
+  },
+
+  "evidence": {
+    "incident_date": "2025-09",
+    "production_validated": true,
+    "source": "CRITICAL-FORMATS-TRUTH.md:214-268"
+  },
+
+  "metadata": {
+    "last_verified": "2025-10-06",
+    "production_incidents": 1,
+    "recovery_required": true
+  }
+}

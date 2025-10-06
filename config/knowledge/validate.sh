@@ -3,7 +3,7 @@ set -e
 
 echo "🔍 Validating SmartSuite Knowledge Base (IntelligentHandler Interface Compliance)..."
 
-KNOWLEDGE_BASE="staging/config/knowledge"
+KNOWLEDGE_BASE="config/knowledge"
 ERRORS=0
 
 # Colors for output

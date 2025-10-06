@@ -1,21 +1,71 @@
 {
-  "version": "1.0.0",
+  "version": "2.0.0",
   "api_compatibility": "v1",
-  "last_updated": "2025-10-02",
-  "checksum": "sha256-placeholder",
-  "patterns": [
-    "UUID_CORRUPTION",
-    "BULK_OPERATION_LIMIT",
-    "WRONG_HTTP_METHOD",
-    "SMARTDOC_FORMAT",
-    "FIELD_NAME_VS_ID"
-  ],
-  "knowledge_files": [
-    "CRITICAL-FORMATS-TRUTH.md",
-    "API-CAPABILITIES-TRUTH.md",
-    "API-LIMITATIONS-TRUTH.md",
-    "FIELD-OPERATIONS-TRUTH.md",
-    "QUICK-REFERENCE.md"
-  ],
-  "description": "SmartSuite API knowledge base manifest for intelligent tool safety validation"
+  "last_updated": "2025-10-06",
+  "structure_version": "machine_optimized_v2",
+  "description": "Test fixture knowledge base for unit testing",
+
+  "pattern_index": {
+    "red": [
+      {
+        "id": "RED_001",
+        "pattern": "UUID_CORRUPTION",
+        "name": "UUID Corruption in Status Fields",
+        "file": "patterns/red/uuid-corruption.json",
+        "safetyLevel": "RED"
+      },
+      {
+        "id": "RED_002",
+        "pattern": "WRONG_HTTP_METHOD",
+        "name": "Wrong HTTP Method",
+        "file": "patterns/red/wrong-http-method.json",
+        "safetyLevel": "RED"
+      },
+      {
+        "id": "RED_003",
+        "pattern": "SMARTDOC_FORMAT",
+        "name": "SmartDoc Format Requirement",
+        "file": "patterns/red/smartdoc-format.json",
+        "safetyLevel": "RED"
+      }
+    ],
+    "yellow": [
+      {
+        "id": "YELLOW_001",
+        "pattern": "BULK_OPERATION_LIMIT",
+        "name": "Bulk Operation Limit",
+        "file": "patterns/yellow/bulk-operation-limit.json",
+        "safetyLevel": "YELLOW"
+      },
+      {
+        "id": "YELLOW_002",
+        "pattern": "FIELD_NAME_VS_ID",
+        "name": "Field Name vs ID Confusion",
+        "file": "patterns/yellow/field-name-vs-id.json",
+        "safetyLevel": "YELLOW"
+      }
+    ],
+    "green": []
+  },
+
+  "validation_rules": [],
+
+  "loading": {
+    "strategy": "eager",
+    "target_time": "<100ms",
+    "mcp_server_startup": true
+  },
+
+  "pattern_matching": {
+    "severity_priority": ["red", "yellow", "green"],
+    "citation_format": "pattern_id + pattern_name",
+    "interface_compliance": "IntelligentHandler KnowledgePattern interface"
+  },
+
+  "interface_requirements": {
+    "required_fields": ["pattern", "safetyLevel", "failureModes"],
+    "optional_fields": ["validationRules", "correction"],
+    "safetyLevel_values": ["RED", "YELLOW", "GREEN"],
+    "pattern_naming": "UPPERCASE_WITH_UNDERSCORES"
+  }
 }

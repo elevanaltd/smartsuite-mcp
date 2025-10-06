@@ -1,0 +1,24 @@
+{
+  "pattern_id": "RED_002",
+  "schema_version": "2.0.0",
+  "pattern": "WRONG_HTTP_METHOD",
+  "name": "Wrong HTTP Method",
+  "safetyLevel": "RED",
+  "severity": "BLOCKING",
+  "category": "api_usage",
+
+  "failureModes": [
+    {
+      "description": "Using GET /records instead of POST /records/list/",
+      "prevention": "Use POST method with /list/ endpoint for record queries",
+      "impact": "405 Method Not Allowed error from SmartSuite API"
+    }
+  ],
+
+  "validationRules": [],
+
+  "correction": {
+    "method": "POST",
+    "endpoint": "/records/list/"
+  }
+}

@@ -948,4 +948,286 @@ describe('SmartSuiteClient - Authentication (AUTH-001, AUTH-002)', () => {
       expect(count).toBe(42);
     });
   });
+
+  // PHASE 2J: Field Management Extensions
+  describe('Field Management Operations (PHASE 2J)', () => {
+    it('should add field with addField() method', async () => {
+      // CONTRACT: addField() creates new field in SmartSuite table
+      // EXPECT: Returns field configuration with ID
+
+      // Arrange
+      const mockFetch = vi.fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ applications: [] }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 201,
+          json: async () => ({
+            id: 'field_123',
+            field_type: 'textfield',
+            label: 'Test Field',
+            slug: 'test_field',
+          }),
+        });
+      global.fetch = mockFetch as unknown as typeof fetch;
+
+      const { createAuthenticatedClient } = await import('../../../src/core/smartsuite-client.js');
+      const client = await createAuthenticatedClient({
+        apiKey: 'test-key',
+        workspaceId: 'test-workspace',
+      });
+
+      // Act
+      const result = await client.addField('app-123', {
+        field_type: 'textfield',
+        label: 'Test Field',
+        slug: 'test_field',
+      });
+
+      // Assert - Field created
+      expect(result).toHaveProperty('id', 'field_123');
+      expect(result).toHaveProperty('field_type', 'textfield');
+      expect(result).toHaveProperty('label', 'Test Field');
+      expect(result).toHaveProperty('slug', 'test_field');
+
+      // Assert - Correct API endpoint called
+      const fieldCreateCall = mockFetch.mock.calls[1];
+      if (!fieldCreateCall?.[0]) {
+        throw new Error('Test setup failed: addField call not found');
+      }
+      expect(fieldCreateCall[0]).toContain('/api/v1/applications/app-123/add_field/');
+      expect(fieldCreateCall[1]?.method).toBe('POST');
+    });
+
+    it('should update field with updateField() method', async () => {
+      // CONTRACT: updateField() modifies existing field configuration
+      // EXPECT: Returns updated field configuration
+
+      // Arrange
+      const mockFetch = vi.fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ applications: [] }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            id: 'field_123',
+            field_type: 'textfield',
+            label: 'Updated Field',
+            slug: 'test_field',
+          }),
+        });
+      global.fetch = mockFetch as unknown as typeof fetch;
+
+      const { createAuthenticatedClient } = await import('../../../src/core/smartsuite-client.js');
+      const client = await createAuthenticatedClient({
+        apiKey: 'test-key',
+        workspaceId: 'test-workspace',
+      });
+
+      // Act
+      const result = await client.updateField('app-123', 'field_123', {
+        label: 'Updated Field',
+      });
+
+      // Assert - Field updated
+      expect(result).toHaveProperty('id', 'field_123');
+      expect(result).toHaveProperty('label', 'Updated Field');
+
+      // Assert - Correct API endpoint called
+      const fieldUpdateCall = mockFetch.mock.calls[1];
+      if (!fieldUpdateCall?.[0]) {
+        throw new Error('Test setup failed: updateField call not found');
+      }
+      expect(fieldUpdateCall[0]).toContain('/api/v1/applications/app-123/change_field/');
+      expect(fieldUpdateCall[1]?.method).toBe('POST');
+    });
+
+    it('should include authentication headers in field operations', async () => {
+      // CONTRACT: Field operations require same auth as record operations
+      // EXPECT: Token and ACCOUNT-ID headers present
+
+      // Arrange
+      const mockFetch = vi.fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ applications: [] }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 201,
+          json: async () => ({ id: 'field_123' }),
+        });
+      global.fetch = mockFetch as unknown as typeof fetch;
+
+      const { createAuthenticatedClient } = await import('../../../src/core/smartsuite-client.js');
+      const client = await createAuthenticatedClient({
+        apiKey: 'my-key',
+        workspaceId: 'my-workspace',
+      });
+
+      // Act
+      await client.addField('app-123', {
+        field_type: 'textfield',
+        label: 'Test',
+        slug: 'test',
+      });
+
+      // Assert - Check authentication headers
+      const fieldCreateCall = mockFetch.mock.calls[1];
+      if (!fieldCreateCall?.[1]?.headers) {
+        throw new Error('Test setup failed: request headers not found');
+      }
+      const headers = fieldCreateCall[1].headers as Record<string, string>;
+      expect(headers.Authorization).toBe('Token my-key');
+      expect(headers['ACCOUNT-ID']).toBe('my-workspace');
+    });
+
+    it('should handle 400 errors for invalid field configuration', async () => {
+      // CONTRACT: API validation errors propagate with context
+      // EXPECT: Clear error message about validation failure
+
+      // Arrange
+      const mockFetch = vi.fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ applications: [] }),
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 400,
+          statusText: 'Bad Request',
+          json: async () => ({ error: 'Field slug already exists' }),
+        });
+      global.fetch = mockFetch as unknown as typeof fetch;
+
+      const { createAuthenticatedClient } = await import('../../../src/core/smartsuite-client.js');
+      const client = await createAuthenticatedClient({
+        apiKey: 'test-key',
+        workspaceId: 'test-workspace',
+      });
+
+      // Act & Assert
+      await expect(
+        client.addField('app-123', {
+          field_type: 'textfield',
+          label: 'Test',
+          slug: 'existing_slug',
+        }),
+      ).rejects.toThrow(/400|bad request/i);
+    });
+
+    it('should handle 401 errors for field operations', async () => {
+      // CONTRACT: Authentication errors for field operations
+      // EXPECT: Same auth error handling as record operations
+
+      // Arrange
+      const mockFetch = vi.fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ applications: [] }),
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 401,
+          statusText: 'Unauthorized',
+          json: async () => ({ error: 'Invalid API key' }),
+        });
+      global.fetch = mockFetch as unknown as typeof fetch;
+
+      const { createAuthenticatedClient } = await import('../../../src/core/smartsuite-client.js');
+      const client = await createAuthenticatedClient({
+        apiKey: 'test-key',
+        workspaceId: 'test-workspace',
+      });
+
+      // Act & Assert
+      await expect(
+        client.addField('app-123', {
+          field_type: 'textfield',
+          label: 'Test',
+          slug: 'test',
+        }),
+      ).rejects.toThrow(/401|unauthorized/i);
+    });
+
+    it('should handle 404 errors when table not found', async () => {
+      // CONTRACT: Clear error when table does not exist
+      // EXPECT: Table not found error
+
+      // Arrange
+      const mockFetch = vi.fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ applications: [] }),
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 404,
+          statusText: 'Not Found',
+          json: async () => ({ error: 'Table not found' }),
+        });
+      global.fetch = mockFetch as unknown as typeof fetch;
+
+      const { createAuthenticatedClient } = await import('../../../src/core/smartsuite-client.js');
+      const client = await createAuthenticatedClient({
+        apiKey: 'test-key',
+        workspaceId: 'test-workspace',
+      });
+
+      // Act & Assert
+      await expect(
+        client.addField('nonexistent-table', {
+          field_type: 'textfield',
+          label: 'Test',
+          slug: 'test',
+        }),
+      ).rejects.toThrow(/404|not found/i);
+    });
+
+    it('should handle 500 server errors for field operations', async () => {
+      // CONTRACT: Server errors propagate with context
+      // EXPECT: Server error message
+
+      // Arrange
+      const mockFetch = vi.fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ applications: [] }),
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          statusText: 'Internal Server Error',
+          json: async () => ({ error: 'Database error' }),
+        });
+      global.fetch = mockFetch as unknown as typeof fetch;
+
+      const { createAuthenticatedClient } = await import('../../../src/core/smartsuite-client.js');
+      const client = await createAuthenticatedClient({
+        apiKey: 'test-key',
+        workspaceId: 'test-workspace',
+      });
+
+      // Act & Assert
+      await expect(
+        client.addField('app-123', {
+          field_type: 'textfield',
+          label: 'Test',
+          slug: 'test',
+        }),
+      ).rejects.toThrow(/500|internal.*server.*error/i);
+    });
+  });
 });

@@ -58,6 +58,8 @@ export interface SmartSuiteClient {
   getSchema(appId: string): Promise<unknown>;
   countRecords(appId: string, options?: SmartSuiteListOptions): Promise<number>;
   request(options: SmartSuiteRequestOptions): Promise<unknown>;
+  addField(appId: string, fieldConfig: Record<string, unknown>): Promise<unknown>;
+  updateField(appId: string, fieldId: string, updates: Record<string, unknown>): Promise<unknown>;
 }
 
 /**
@@ -267,6 +269,14 @@ export function createClient(apiKey: string, workspaceId: string, baseUrl: strin
 
     async request(options: SmartSuiteRequestOptions): Promise<unknown> {
       return makeRequest(options.endpoint, options.method, options.data);
+    },
+
+    async addField(appId: string, fieldConfig: Record<string, unknown>): Promise<unknown> {
+      return makeRequest(`/api/v1/applications/${appId}/add_field/`, 'POST', fieldConfig);
+    },
+
+    async updateField(appId: string, fieldId: string, updates: Record<string, unknown>): Promise<unknown> {
+      return makeRequest(`/api/v1/applications/${appId}/change_field/${fieldId}/`, 'POST', updates);
     },
   };
 }

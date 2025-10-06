@@ -24,6 +24,8 @@ describe('RecordHandler', () => {
       deleteRecord: vi.fn(),
       getSchema: vi.fn(),
       request: vi.fn(),
+      addField: vi.fn(),
+      updateField: vi.fn(),
     };
   });
 

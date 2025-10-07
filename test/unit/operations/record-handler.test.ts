@@ -203,26 +203,39 @@ describe('RecordHandler', () => {
       expect(mockClient.createRecord).toHaveBeenCalledWith(tableId, testData);
     });
 
-    it('should throw error if execution attempted without prior validation', async () => {
-      // CONTRACT: Safety gate - no execution without validation
-      // CRITICAL: Prevents accidental mutations
+    it('should execute operation without prior validation (stateless MCP)', async () => {
+      // CONTRACT UPDATE: Validation gate removed per UX research
+      // Reference: coordination/reports/851-REPORT-MCP-TOOL-UX-INVESTIGATION.md
+      // RATIONALE: MCP protocol is stateless - validation state cannot persist
+      // SAFETY: Format validation still available via optional dry-run preview
 
       // Arrange
       const { RecordHandler } = await import('../../../src/operations/record-handler.js');
       const tableId = '68a8ff5237fde0bf797c05b3';
+      const testData = { title: 'Direct Execution Test' };
+      const createdRecord = {
+        id: 'direct-exec-123',
+        ...testData,
+        created_at: '2025-10-07T00:00:00Z',
+      };
 
-      // Act & Assert
+      // Mock successful creation
+      vi.mocked(mockClient.createRecord).mockResolvedValue(createdRecord);
+
+      // Act - Execute without validated flag
       const handler = new RecordHandler();
       handler.setClient(mockClient);
-      await expect(
-        handler.execute({
-          operation: 'create',
-          tableId,
-          data: { title: 'Test' },
-          dryRun: false,
-          // validated: false (implicit)
-        }),
-      ).rejects.toThrow(/validation required|must validate first/i);
+      const result = await handler.execute({
+        operation: 'create',
+        tableId,
+        data: testData,
+        dryRun: false,
+        // No validated flag - should execute directly
+      });
+
+      // Assert - Operation executes successfully
+      expect(result).toHaveProperty('id', 'direct-exec-123');
+      expect(mockClient.createRecord).toHaveBeenCalledWith(tableId, testData);
     });
   });
 

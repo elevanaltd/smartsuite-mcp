@@ -220,7 +220,7 @@ export function getToolSchemas(): ToolSchema[] {
     },
     {
       name: 'smartsuite_intelligent',
-      description: 'AI-guided access to any SmartSuite API with knowledge-driven safety. Supports learn, dry_run, and execute modes for guided operations.',
+      description: 'AI-guided safety analysis for SmartSuite operations. Analyzes API requests against knowledge base to detect dangerous patterns (UUID corruption, wrong HTTP methods, format issues). Returns RED/YELLOW/GREEN safety guidance with warnings, blockers, and suggested corrections. Use other tools (smartsuite_query, smartsuite_record) for actual API execution.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -241,7 +241,7 @@ export function getToolSchemas(): ToolSchema[] {
             type: 'string',
             enum: ['learn', 'dry_run', 'execute'],
             default: 'learn',
-            description: 'Operation mode: learn (analyze), dry_run (validate), execute (perform)',
+            description: 'Analysis depth: learn (basic analysis), dry_run (detailed validation), execute (comprehensive analysis with execution recommendations). Note: This tool performs ANALYSIS ONLY - use smartsuite_query/smartsuite_record for actual API execution.',
           },
           tableId: {
             type: 'string',

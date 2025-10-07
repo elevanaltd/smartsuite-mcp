@@ -51,9 +51,13 @@ export interface RecordResult {
  * Responsibilities:
  * - Validate field formats (SmartDoc, linked records, status codes)
  * - Perform dry-run simulation with connectivity checks
- * - Enforce validation-before-execution safety pattern
+  * - Execute operations directly (validation gate removed per UX research)
  * - Delegate all API communication to SmartSuiteClient
  *
+ *
+ * Design Change: Validation requirement removed per MINIMAL_INTERVENTION_PRINCIPLE
+ * Reference: coordination/reports/851-REPORT-MCP-TOOL-UX-INVESTIGATION.md
+ * Rationale: MCP protocol is stateless - validation state cannot persist between calls
  * Critical Format Requirements (from CRITICAL-FORMATS-TRUTH.md):
  * 1. Rich text fields MUST use SmartDoc structure (not plain strings)
  * 2. Linked records MUST be arrays (even single values)
@@ -67,7 +71,7 @@ export class RecordHandler {
    * Minimal implementation to satisfy test contracts
    */
   async execute(context: RecordContext): Promise<DryRunResult | RecordResult> {
-    const { operation, tableId, recordId, data, dryRun, validated } = context;
+    const { operation, tableId, recordId, data, dryRun } = context;
 
     // Validate required parameters
     if (!tableId || typeof tableId !== 'string' || tableId.trim() === '') {
@@ -89,13 +93,11 @@ export class RecordHandler {
       return this.performDryRun(operation, tableId, recordId, data);
     }
 
-    // EXECUTE MODE: Require prior validation
-    if (!validated) {
-      throw new Error(
-        'Validation required: Must validate first before execution. ' +
-        'Run with dryRun: true to validate, then execute with dryRun: false.',
-      );
-    }
+    // EXECUTE MODE: Perform operation directly
+    // Note: Validation gate removed per MINIMAL_INTERVENTION_PRINCIPLE
+    // MCP protocol is stateless - validation state cannot persist between calls
+    // Format validation still available via performDryRun (optional preview)
+    // Reference: coordination/reports/851-REPORT-MCP-TOOL-UX-INVESTIGATION.md
 
     // Route to appropriate operation
     switch (operation) {

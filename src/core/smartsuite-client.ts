@@ -221,7 +221,7 @@ export function createClient(apiKey: string, workspaceId: string, baseUrl: strin
       };
 
       const result = await makeRequest(
-        `/api/v1/applications/${appId}/records`,
+        `/api/v1/applications/${appId}/records/list/`,
         'POST',
         requestData,
       );

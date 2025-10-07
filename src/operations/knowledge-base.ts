@@ -4,7 +4,8 @@
 // Critical-Engineer Analysis: 002-PHASE-2G-INTELLIGENT-TOOL-ANALYSIS.md
 
 import { readFileSync, existsSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
 /**
  * Safety level classification
@@ -194,8 +195,17 @@ export class KnowledgeBase {
    * Critical-Engineer: consulted for Architecture pattern selection
    */
   static loadFromFiles(basePath?: string): KnowledgeBase {
-    // Default to config/knowledge directory (relative to project root)
-    const knowledgePath = basePath ?? join(process.cwd(), 'config/knowledge');
+    // Get the directory of this module file
+    // For CommonJS: use __dirname (if available)
+    // For ESM: use import.meta.url with fileURLToPath
+    const currentDir = typeof __dirname !== 'undefined'
+      ? __dirname
+      : dirname(fileURLToPath(import.meta.url));
+
+    // Default to config/knowledge directory (relative to build directory)
+    // currentDir in build will be: build/src/operations
+    // So ../../../config/knowledge resolves to: staging/config/knowledge
+    const knowledgePath = basePath ?? join(currentDir, '../../../config/knowledge');
     const manifestPath = join(knowledgePath, 'manifest.json');
 
     // Validate manifest exists

@@ -141,8 +141,21 @@ export class FieldHandler {
       };
     }
 
-    // Execute real API call
-    const result = await this.client!.addField(tableId, fieldConfig);
+    // Transform to SmartSuite API structure
+    // Constitutional citation (line 102): EMPIRICAL_DEVELOPMENT - API contract requires nested structure
+    const apiPayload = {
+      field: {
+        ...fieldConfig,
+        is_new: true, // Required by API for new field creation
+      },
+      field_position: {
+        prev_sibling_slug: '', // Empty string = add at beginning
+      },
+      auto_fill_structure_layout: true,
+    };
+
+    // Execute real API call with properly structured payload
+    const result = await this.client!.addField(tableId, apiPayload);
 
     return {
       operation: 'create',

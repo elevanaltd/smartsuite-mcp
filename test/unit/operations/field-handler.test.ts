@@ -72,8 +72,18 @@ describe('FieldHandler', () => {
       expect(field.label).toBe('Test Field');
       expect(field.slug).toBe('test_field');
 
-      // Assert - API called correctly
-      expect(mockClient.addField).toHaveBeenCalledWith(tableId, fieldConfig);
+      // Assert - API called correctly with nested structure
+      // Constitutional citation (line 102): EMPIRICAL_DEVELOPMENT - verify API contract compliance
+      expect(mockClient.addField).toHaveBeenCalledWith(tableId, {
+        field: {
+          ...fieldConfig,
+          is_new: true,
+        },
+        field_position: {
+          prev_sibling_slug: '',
+        },
+        auto_fill_structure_layout: true,
+      });
     });
 
     it('should support optional params for field-type specific configuration', async () => {

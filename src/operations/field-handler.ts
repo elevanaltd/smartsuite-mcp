@@ -122,6 +122,11 @@ export class FieldHandler {
 
   /**
    * Handle field creation
+   *
+   * LAYER RESPONSIBILITY: Send flat config to client
+   * Client handles API structure nesting (field, field_position, etc.)
+   *
+   * Reference: FIELD-OPERATIONS-TRUTH.md L28-44 for API contract
    */
   private async handleCreate(
     tableId: string,
@@ -141,21 +146,21 @@ export class FieldHandler {
       };
     }
 
-    // Transform to SmartSuite API structure
-    // Constitutional citation (line 102): EMPIRICAL_DEVELOPMENT - API contract requires nested structure
-    const apiPayload = {
-      field: {
-        ...fieldConfig,
-        is_new: true, // Required by API for new field creation
+    // Diagnostic logging - track payload transformation
+    // eslint-disable-next-line no-console
+    console.log('[FIELD-HANDLER] Sending flat config to client:', JSON.stringify({
+      tableId,
+      fieldConfig: {
+        slug: fieldConfig.slug,
+        label: fieldConfig.label,
+        field_type: fieldConfig.field_type,
+        params: fieldConfig.params,
       },
-      field_position: {
-        prev_sibling_slug: '', // Empty string = add at beginning
-      },
-      auto_fill_structure_layout: true,
-    };
+    }, null, 2));
 
-    // Execute real API call with properly structured payload
-    const result = await this.client!.addField(tableId, apiPayload);
+    // Send FLAT config to client - client handles nesting
+    // Option A: Handler sends flat, client nests (clearer separation)
+    const result = await this.client!.addField(tableId, fieldConfig);
 
     return {
       operation: 'create',

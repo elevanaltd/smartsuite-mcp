@@ -288,29 +288,68 @@ export function createClient(apiKey: string, workspaceId: string, baseUrl: strin
     },
 
     async addField(appId: string, fieldConfig: Record<string, unknown>): Promise<unknown> {
-      // Wrap field config in required API structure
+      /**
+       * LAYER RESPONSIBILITY: Nest flat config into SmartSuite API structure
+       * Reference: FIELD-OPERATIONS-TRUTH.md L28-44 for verified working pattern
+       *
+       * Input (flat from handler):
+       *   { slug: "test123", label: "Test", field_type: "textfield", params: {} }
+       *
+       * Output (nested for API):
+       *   {
+       *     field: { slug, label, field_type, params, is_new: true },
+       *     field_position: { prev_sibling_slug: "" },
+       *     auto_fill_structure_layout: true
+       *   }
+       */
+
+      // Build proper API payload from flat config
       const apiPayload = {
         field: {
-          ...fieldConfig,
-          params: fieldConfig.params ?? {},  // params is required, even if empty
-          is_new: true,  // Required for new fields per FIELD-OPERATIONS-TRUTH.md
+          slug: fieldConfig.slug as string,
+          label: fieldConfig.label as string,
+          field_type: fieldConfig.field_type as string,
+          params: fieldConfig.params ?? {},  // Required even if empty (FIELD-OPERATIONS-TRUTH.md L34)
+          is_new: true,  // Required for new fields (FIELD-OPERATIONS-TRUTH.md L37)
         },
         field_position: {
-          prev_sibling_slug: fieldConfig.prev_sibling_slug ?? '',  // Empty string for first position
+          prev_sibling_slug: (fieldConfig.prev_sibling_slug as string) ?? '',  // Empty = beginning (L47)
         },
-        auto_fill_structure_layout: true,
+        auto_fill_structure_layout: true,  // Required (L42)
       };
 
-      // Remove prev_sibling_slug from field object if it was included
-      if ('prev_sibling_slug' in apiPayload.field) {
-        delete apiPayload.field.prev_sibling_slug;
-      }
+      // Diagnostic logging - track API payload
+      // eslint-disable-next-line no-console
+      console.log('[SMARTSUITE-CLIENT] Sending to API:', JSON.stringify(apiPayload, null, 2));
 
       return makeRequest(`/applications/${appId}/add_field/`, 'POST', apiPayload);
     },
 
     async updateField(appId: string, fieldId: string, updates: Record<string, unknown>): Promise<unknown> {
-      return makeRequest(`/applications/${appId}/change_field/`, 'PUT', { slug: fieldId, ...updates });
+      /**
+       * LAYER RESPONSIBILITY: Build update payload with slug + updates
+       * Reference: FIELD-OPERATIONS-TRUTH.md L130-138 for verified working pattern
+       *
+       * Input (flat from handler):
+       *   { label: "New Label", field_type: "textfield", params: {...} }
+       *
+       * Output (for API):
+       *   { slug: "field_id", label: "New Label", field_type: "textfield", params: {...} }
+       *
+       * CRITICAL: Must include ALL required fields (slug, label, field_type, params)
+       * CRITICAL: Use "choices" not "options" for select fields (UUID corruption prevention)
+       */
+
+      const apiPayload = {
+        slug: fieldId,
+        ...updates,
+      };
+
+      // Diagnostic logging - track API payload
+      // eslint-disable-next-line no-console
+      console.log('[SMARTSUITE-CLIENT] Sending update to API:', JSON.stringify(apiPayload, null, 2));
+
+      return makeRequest(`/applications/${appId}/change_field/`, 'PUT', apiPayload);
     },
   };
 }

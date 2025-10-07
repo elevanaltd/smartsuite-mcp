@@ -270,12 +270,16 @@ export function createClient(apiKey: string, workspaceId: string, baseUrl: strin
     },
 
     async countRecords(appId: string, options?: SmartSuiteListOptions): Promise<number> {
+      // SMARTSUITE API CONTRACT: Count uses /records/list/ with count_only flag
+      // REFERENCE: API-CAPABILITIES-TRUTH.md L214-220
+      // EVIDENCE: No separate /records/count/ endpoint exists
       const requestData = {
+        count_only: true, // ✅ Required flag for count operation
         ...(options?.filter && { filter: options.filter }),
       };
 
       const result = await makeRequest(
-        `/applications/${appId}/records/count/`,
+        `/applications/${appId}/records/list/`, // ✅ Uses list endpoint, not count
         'POST',
         requestData,
       );

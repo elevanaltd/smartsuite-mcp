@@ -947,6 +947,54 @@ describe('SmartSuiteClient - Authentication (AUTH-001, AUTH-002)', () => {
       // Assert
       expect(count).toBe(42);
     });
+
+    it('should use /records/list/ endpoint with count_only flag per SmartSuite API contract', async () => {
+      // CONTRACT: Count uses /records/list/ with {"count_only": true}, NOT /records/count/
+      // EVIDENCE: API-CAPABILITIES-TRUTH.md L214-220
+      // EXPECT: POST to /records/list/ with count_only flag
+
+      // Arrange
+      const mockFetch = vi.fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ applications: [] }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ count: 42 }),
+        });
+      global.fetch = mockFetch as unknown as typeof fetch;
+
+      const { createAuthenticatedClient } = await import('../../../src/core/smartsuite-client.js');
+      const client = await createAuthenticatedClient({
+        apiKey: 'test-key',
+        workspaceId: 'test-workspace',
+      });
+
+      // Act
+      const count = await client.countRecords('app-123', {
+        filter: { status: 'active' },
+      });
+
+      // Assert - Verify correct endpoint and payload
+      expect(count).toBe(42);
+      expect(mockFetch).toHaveBeenCalledTimes(2); // Auth + count request
+
+      // Verify second call (count operation) uses correct endpoint and payload
+      const countCall = mockFetch.mock.calls[1];
+      expect(countCall).toBeDefined();
+      if (!countCall) throw new Error('Count call not found');
+
+      const [url, options] = countCall;
+      expect(url).toBe('https://app.smartsuite.com/api/v1/applications/app-123/records/list/');
+      expect(options).toBeDefined();
+
+      const parsedBody = JSON.parse((options as { body?: string })?.body ?? '{}');
+      expect(parsedBody.count_only).toBe(true);
+      expect(parsedBody.filter).toEqual({ status: 'active' });
+    });
   });
 
   // PHASE 2J: Field Management Extensions

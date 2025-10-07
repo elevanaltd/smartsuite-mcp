@@ -327,27 +327,46 @@ export function createClient(apiKey: string, workspaceId: string, baseUrl: strin
 
     async updateField(appId: string, fieldId: string, updates: Record<string, unknown>): Promise<unknown> {
       /**
-       * LAYER RESPONSIBILITY: Build update payload with slug + updates
-       * Reference: FIELD-OPERATIONS-TRUTH.md L130-138 for verified working pattern
+       * LAYER RESPONSIBILITY: Fetch current field, merge updates, send complete payload
+       * Reference: FIELD-OPERATIONS-TRUTH.md L123-127 for required parameters
        *
-       * Input (flat from handler):
-       *   { label: "New Label", field_type: "textfield", params: {...} }
+       * CRITICAL REQUIREMENT: SmartSuite API requires ALL fields in update payload:
+       *   - slug (field identifier)
+       *   - label (current or updated)
+       *   - field_type (current or updated)
+       *   - params (current or updated)
        *
-       * Output (for API):
-       *   { slug: "field_id", label: "New Label", field_type: "textfield", params: {...} }
-       *
-       * CRITICAL: Must include ALL required fields (slug, label, field_type, params)
-       * CRITICAL: Use "choices" not "options" for select fields (UUID corruption prevention)
+       * Strategy: Fetch current field definition, merge updates, send complete object
        */
 
+      // Fetch current field definition to get existing label, field_type, params
+      const schema = await makeRequest(`/applications/${appId}/`, 'GET') as { structure?: Array<{ slug: string; label: string; field_type: string; params?: Record<string, unknown> }> };
+
+      if (!schema.structure) {
+        throw new Error(`Failed to fetch schema for table ${appId}`);
+      }
+
+      const currentField = schema.structure.find((f: { slug: string }) => f.slug === fieldId);
+
+      if (!currentField) {
+        throw new Error(`Field ${fieldId} not found in table ${appId}`);
+      }
+
+      // Build complete API payload with all required fields
       const apiPayload = {
         slug: fieldId,
-        ...updates,
+        label: (updates.label as string) ?? currentField.label,
+        field_type: (updates.field_type as string) ?? currentField.field_type,
+        params: updates.params ?? currentField.params ?? {},
       };
 
       // Diagnostic logging - track API payload
       // eslint-disable-next-line no-console
-      console.log('[SMARTSUITE-CLIENT] Sending update to API:', JSON.stringify(apiPayload, null, 2));
+      console.log('[SMARTSUITE-CLIENT] Current field:', JSON.stringify(currentField, null, 2));
+      // eslint-disable-next-line no-console
+      console.log('[SMARTSUITE-CLIENT] Updates provided:', JSON.stringify(updates, null, 2));
+      // eslint-disable-next-line no-console
+      console.log('[SMARTSUITE-CLIENT] Sending complete payload to API:', JSON.stringify(apiPayload, null, 2));
 
       return makeRequest(`/applications/${appId}/change_field/`, 'PUT', apiPayload);
     },

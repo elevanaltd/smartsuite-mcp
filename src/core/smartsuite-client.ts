@@ -179,6 +179,16 @@ export function createClient(apiKey: string, workspaceId: string, baseUrl: strin
         return {};
       }
 
+      // Handle 200 with empty body (field creation returns this)
+      const contentLength = response.headers?.get('content-length');
+      const contentType = response.headers?.get('content-type');
+
+      // If content-length is 0 or no JSON content-type, return empty object
+      if (contentLength === '0' || (contentType && !contentType.includes('application/json'))) {
+        return {};
+      }
+
+      // Try to parse JSON
       return await response.json();
     } catch (error) {
       // Network errors
@@ -197,8 +207,8 @@ export function createClient(apiKey: string, workspaceId: string, baseUrl: strin
     let errorMessage = '';
 
     try {
-      const errorData = await response.json() as { error?: string };
-      errorMessage = errorData.error ?? response.statusText;
+      const errorData = await response.json() as { error?: string; message?: string; detail?: string };
+      errorMessage = errorData.error ?? errorData.message ?? errorData.detail ?? response.statusText;
     } catch {
       errorMessage = response.statusText;
     }
@@ -278,7 +288,25 @@ export function createClient(apiKey: string, workspaceId: string, baseUrl: strin
     },
 
     async addField(appId: string, fieldConfig: Record<string, unknown>): Promise<unknown> {
-      return makeRequest(`/applications/${appId}/add_field/`, 'POST', fieldConfig);
+      // Wrap field config in required API structure
+      const apiPayload = {
+        field: {
+          ...fieldConfig,
+          params: fieldConfig.params ?? {},  // params is required, even if empty
+          is_new: true,  // Required for new fields per FIELD-OPERATIONS-TRUTH.md
+        },
+        field_position: {
+          prev_sibling_slug: fieldConfig.prev_sibling_slug ?? '',  // Empty string for first position
+        },
+        auto_fill_structure_layout: true,
+      };
+
+      // Remove prev_sibling_slug from field object if it was included
+      if ('prev_sibling_slug' in apiPayload.field) {
+        delete apiPayload.field.prev_sibling_slug;
+      }
+
+      return makeRequest(`/applications/${appId}/add_field/`, 'POST', apiPayload);
     },
 
     async updateField(appId: string, fieldId: string, updates: Record<string, unknown>): Promise<unknown> {

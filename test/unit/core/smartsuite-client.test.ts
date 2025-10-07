@@ -1005,6 +1005,7 @@ describe('SmartSuiteClient - Authentication (AUTH-001, AUTH-002)', () => {
     it('should update field with updateField() method', async () => {
       // CONTRACT: updateField() modifies existing field configuration
       // EXPECT: Returns updated field configuration
+      // IMPLEMENTATION: Fetch schema first, merge updates, send complete payload
 
       // Arrange
       const mockFetch = vi.fn()
@@ -1013,6 +1014,22 @@ describe('SmartSuiteClient - Authentication (AUTH-001, AUTH-002)', () => {
           status: 200,
           json: async () => ({ applications: [] }),
         })
+        // Mock schema fetch (required for fetching current field definition)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            structure: [
+              {
+                slug: 'field_123',
+                label: 'Original Label',
+                field_type: 'textfield',
+                params: {},
+              },
+            ],
+          }),
+        })
+        // Mock field update response
         .mockResolvedValueOnce({
           ok: true,
           status: 200,
@@ -1020,7 +1037,7 @@ describe('SmartSuiteClient - Authentication (AUTH-001, AUTH-002)', () => {
             id: 'field_123',
             field_type: 'textfield',
             label: 'Updated Field',
-            slug: 'test_field',
+            slug: 'field_123',
           }),
         });
       global.fetch = mockFetch as unknown as typeof fetch;
@@ -1040,8 +1057,16 @@ describe('SmartSuiteClient - Authentication (AUTH-001, AUTH-002)', () => {
       expect(result).toHaveProperty('id', 'field_123');
       expect(result).toHaveProperty('label', 'Updated Field');
 
-      // Assert - Correct API endpoint called
-      const fieldUpdateCall = mockFetch.mock.calls[1];
+      // Assert - Schema fetch happened (call index 1, after auth)
+      const schemaCall = mockFetch.mock.calls[1];
+      if (!schemaCall?.[0]) {
+        throw new Error('Test setup failed: schema fetch call not found');
+      }
+      expect(schemaCall[0]).toContain('/api/v1/applications/app-123/');
+      expect(schemaCall[1]?.method).toBe('GET');
+
+      // Assert - Correct API endpoint called for update (call index 2)
+      const fieldUpdateCall = mockFetch.mock.calls[2];
       if (!fieldUpdateCall?.[0]) {
         throw new Error('Test setup failed: updateField call not found');
       }
@@ -1049,9 +1074,12 @@ describe('SmartSuiteClient - Authentication (AUTH-001, AUTH-002)', () => {
       expect(fieldUpdateCall[0]).not.toContain('field_123'); // Field ID should NOT be in URL
       expect(fieldUpdateCall[1]?.method).toBe('PUT');
 
-      // Assert - slug parameter included in request body
+      // Assert - Complete payload with all required fields (slug, label, field_type, params)
       const requestBody = JSON.parse(fieldUpdateCall[1]?.body as string);
       expect(requestBody).toHaveProperty('slug', 'field_123');
+      expect(requestBody).toHaveProperty('label', 'Updated Field'); // Updated value
+      expect(requestBody).toHaveProperty('field_type', 'textfield'); // Preserved from current
+      expect(requestBody).toHaveProperty('params'); // Preserved from current
     });
 
     it('should include authentication headers in field operations', async () => {

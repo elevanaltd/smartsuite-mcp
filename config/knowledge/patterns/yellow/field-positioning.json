@@ -1,0 +1,122 @@
+{
+  "pattern_id": "YELLOW_004",
+  "schema_version": "2.0.0",
+  "pattern": "FIELD_POSITIONING_ERROR",
+  "name": "Field Positioning prev_sibling_slug Null Error",
+  "safetyLevel": "YELLOW",
+  "severity": "WARNING",
+  "category": "field_creation",
+
+  "triggers": [
+    {
+      "condition": "field_creation_operation",
+      "endpoints": [
+        "/add_field/",
+        "/bulk-add-fields/"
+      ],
+      "parameter_check": {
+        "path": "payload.field_position.prev_sibling_slug",
+        "operator": "is_null"
+      }
+    }
+  ],
+
+  "failureModes": [
+    {
+      "description": "Field creation fails with 'This field may not be null' error when prev_sibling_slug is null",
+      "prevention": "Always provide prev_sibling_slug value - use existing field slug for positioning or empty string \"\" for first position",
+      "impact": "Field creation operation rejected. API returns 400 error. Field not created."
+    }
+  ],
+
+  "validationRules": [
+    {
+      "rule_type": "null_check",
+      "condition": "payload.field_position.prev_sibling_slug === null",
+      "action": "WARN",
+      "message": "WARNING: prev_sibling_slug cannot be null. Use empty string \"\" for first position or reference an existing field slug for specific positioning."
+    },
+    {
+      "rule_type": "undefined_check",
+      "condition": "payload.field_position.prev_sibling_slug === undefined",
+      "action": "WARN",
+      "message": "WARNING: prev_sibling_slug is required in field_position object. Provide empty string \"\" for first position or existing field slug."
+    }
+  ],
+
+  "correction": {
+    "description": "Provide valid prev_sibling_slug value for field positioning",
+    "positioning_options": {
+      "first_position": {
+        "value": "\"\"",
+        "description": "Empty string places field at beginning of field list",
+        "example": {
+          "field_position": {
+            "prev_sibling_slug": ""
+          }
+        }
+      },
+      "after_specific_field": {
+        "value": "existing_field_slug",
+        "description": "Reference existing field slug to place new field after it",
+        "example": {
+          "field_position": {
+            "prev_sibling_slug": "s14bmrq90g"
+          }
+        },
+        "note": "Field slug must exist in application schema"
+      },
+      "discovery_pattern": {
+        "workflow": [
+          "1. GET /applications/{appId}/ to retrieve schema",
+          "2. Extract structure[0].fields array",
+          "3. Find desired position field by slug",
+          "4. Use that field's slug as prev_sibling_slug",
+          "5. New field will be inserted after referenced field"
+        ]
+      }
+    },
+    "complete_format": {
+      "method": "POST",
+      "endpoint": "/applications/{appId}/add_field/",
+      "payload": {
+        "field": {
+          "slug": "new_field_abc",
+          "label": "New Field",
+          "field_type": "textfield",
+          "params": {},
+          "is_new": true
+        },
+        "field_position": {
+          "prev_sibling_slug": "existing_field_slug"
+        },
+        "auto_fill_structure_layout": true
+      }
+    },
+    "requirements": [
+      "prev_sibling_slug is REQUIRED (cannot be omitted)",
+      "Cannot be null (will cause error)",
+      "Must be string type",
+      "Use \"\" for first position",
+      "Use existing field slug for specific positioning",
+      "Referenced field must exist in application"
+    ]
+  },
+
+  "evidence": {
+    "source": "CRITICAL-FORMATS-TRUTH.md:404-440",
+    "validation_date": "2025-10-06",
+    "production_verified": true,
+    "error_message": "This field may not be null"
+  },
+
+  "metadata": {
+    "last_verified": "2025-10-06",
+    "affects_endpoints": [
+      "/applications/{appId}/add_field/",
+      "/applications/{appId}/bulk-add-fields/"
+    ],
+    "workaround_available": true,
+    "field_discovery_required": true
+  }
+}

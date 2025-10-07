@@ -1,0 +1,173 @@
+{
+  "rule_set_id": "format_validation_v2",
+  "version": "2.0.0",
+  "description": "Field format validation rules for SmartSuite API operations",
+  "last_updated": "2025-10-06",
+
+  "format_rules": {
+    "linkedrecordfield": {
+      "value_type": "array",
+      "validation": "typeof value === 'object' && Array.isArray(value)",
+      "error": "Linked record fields MUST be arrays, even for single values. Use [\"record_id\"] not \"record_id\".",
+      "severity": "BLOCKING",
+      "pattern_reference": "RED_002",
+      "examples": {
+        "wrong": {"project_id": "68a8ff5237fde0bf797c05b3"},
+        "correct": {"project_id": ["68a8ff5237fde0bf797c05b3"]}
+      }
+    },
+    "richtextareafield": {
+      "value_structure": {
+        "required_keys": ["data", "html", "preview"],
+        "data_structure": {
+          "type": "doc",
+          "content": "array of paragraph/text nodes"
+        }
+      },
+      "validation": "value.data && value.html && value.preview",
+      "error": "Rich text requires SmartDoc structure: {data: {type: 'doc', content: []}, html: '<p></p>', preview: 'text'}",
+      "severity": "BLOCKING",
+      "pattern_reference": "RED_003",
+      "example": {
+        "data": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {"type": "text", "text": "Content here"}
+              ]
+            }
+          ]
+        },
+        "html": "<p>Content here</p>",
+        "preview": "Content here"
+      }
+    },
+    "statusfield": {
+      "value_type": "string",
+      "value_source": "option_code_not_display_label",
+      "validation": "value matches choices[].value from schema",
+      "error": "Use option code (e.g., 'in_progress') not display label (e.g., 'In Progress')",
+      "severity": "BLOCKING",
+      "pattern_reference": "RED_005",
+      "examples": {
+        "wrong": "In Progress",
+        "correct": "in_progress"
+      }
+    },
+    "singleselectfield": {
+      "value_type": "string",
+      "value_source": "option_code_not_display_label",
+      "validation": "value matches choices[].value from schema",
+      "error": "Use option code not display label",
+      "severity": "BLOCKING",
+      "examples": {
+        "wrong": "Option Label",
+        "correct": "option_code"
+      }
+    },
+    "multipleselectfield": {
+      "value_type": "array",
+      "items_source": "option_codes_not_display_labels",
+      "validation": "all array items match choices[].value from schema",
+      "error": "Use array of option codes not display labels",
+      "severity": "BLOCKING",
+      "examples": {
+        "wrong": ["Option 1", "Option 2"],
+        "correct": ["option_1", "option_2"]
+      }
+    },
+    "datefield": {
+      "value_type": "string",
+      "format": "ISO 8601 date",
+      "validation": "matches YYYY-MM-DD pattern",
+      "error": "Date fields require ISO 8601 format: YYYY-MM-DD",
+      "severity": "WARNING",
+      "examples": {
+        "wrong": "10/06/2025",
+        "correct": "2025-10-06"
+      }
+    },
+    "daterangefield": {
+      "value_structure": {
+        "from_date": "ISO 8601 datetime",
+        "to_date": "ISO 8601 datetime"
+      },
+      "validation": "value.from_date && value.to_date",
+      "error": "Date range requires both from_date and to_date in ISO 8601 format",
+      "severity": "WARNING",
+      "example": {
+        "from_date": "2025-10-01T00:00:00Z",
+        "to_date": "2025-10-31T23:59:59Z"
+      }
+    },
+    "numberfield": {
+      "value_type": "number",
+      "validation": "typeof value === 'number'",
+      "error": "Number fields require numeric values, not strings",
+      "severity": "WARNING",
+      "examples": {
+        "wrong": "123",
+        "correct": 123
+      }
+    },
+    "currencyfield": {
+      "value_type": "number",
+      "validation": "typeof value === 'number'",
+      "error": "Currency fields require numeric values (in base currency units)",
+      "severity": "WARNING",
+      "note": "No currency symbol, just numeric value",
+      "examples": {
+        "wrong": "$123.45",
+        "correct": 123.45
+      }
+    },
+    "checkboxfield": {
+      "value_type": "boolean",
+      "validation": "typeof value === 'boolean'",
+      "error": "Checkbox fields require boolean values: true or false",
+      "severity": "WARNING",
+      "examples": {
+        "wrong": "yes",
+        "correct": true
+      }
+    }
+  },
+
+  "field_update_rules": {
+    "status_select_field_updates": {
+      "parameter_requirement": "choices",
+      "forbidden_parameter": "options",
+      "validation": "payload.params.choices exists AND payload.params.options not exists",
+      "error": "CRITICAL: Use 'choices' parameter (NOT 'options') to preserve UUIDs",
+      "severity": "BLOCKING",
+      "pattern_reference": "RED_001",
+      "uuid_preservation_protocol": [
+        "1. GET current schema to retrieve existing choices",
+        "2. Preserve ALL existing choice UUIDs in update",
+        "3. Use 'choices' parameter with complete array",
+        "4. Include all existing + new choices"
+      ]
+    },
+    "field_positioning": {
+      "parameter_requirement": "prev_sibling_slug",
+      "cannot_be_null": true,
+      "validation": "field_position.prev_sibling_slug !== null",
+      "error": "prev_sibling_slug cannot be null. Use empty string \"\" for first position or existing field slug.",
+      "severity": "WARNING",
+      "pattern_reference": "YELLOW_004",
+      "examples": {
+        "first_position": {"prev_sibling_slug": ""},
+        "after_field": {"prev_sibling_slug": "existing_field_slug"}
+      }
+    }
+  },
+
+  "metadata": {
+    "total_rules": 12,
+    "blocking_rules": 5,
+    "warning_rules": 7,
+    "pattern_coverage": ["RED_001", "RED_002", "RED_003", "RED_005", "YELLOW_004"]
+  }
+}

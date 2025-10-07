@@ -1,0 +1,187 @@
+{
+  "rule_set_id": "operator_validation_v2",
+  "version": "2.0.0",
+  "description": "Filter operator validation rules by field type for SmartSuite API",
+  "last_updated": "2025-10-06",
+
+  "operator_rules_by_field_type": {
+    "linkedrecordfield": {
+      "allowed_operators": ["has_any_of", "has_all_of", "has_none_of"],
+      "forbidden_operators": ["is", "contains", "equals"],
+      "error": "Linked record filters require has_any_of/has_all_of/has_none_of. Using 'is' or 'contains' returns 0 results (silent failure).",
+      "severity": "BLOCKING",
+      "pattern_reference": "RED_004",
+      "example": {
+        "wrong": {
+          "field": "project_id",
+          "comparison": "is",
+          "value": "68a8ff5237fde0bf797c05b3"
+        },
+        "correct": {
+          "field": "project_id",
+          "comparison": "has_any_of",
+          "value": ["68a8ff5237fde0bf797c05b3"]
+        }
+      },
+      "critical_note": "Using wrong operator causes silent failure - query returns zero results without error"
+    },
+    "textfield": {
+      "allowed_operators": ["is", "is_not", "contains", "not_contains", "is_empty", "is_not_empty"],
+      "common_use_cases": {
+        "exact_match": "is",
+        "partial_match": "contains",
+        "exclusion": "is_not or not_contains",
+        "null_check": "is_empty or is_not_empty"
+      }
+    },
+    "textareafield": {
+      "allowed_operators": ["is", "is_not", "contains", "not_contains", "is_empty", "is_not_empty"],
+      "note": "Same operators as textfield"
+    },
+    "emailfield": {
+      "allowed_operators": ["is", "is_not", "contains", "not_contains", "is_empty", "is_not_empty"],
+      "note": "Text-like field, supports text operators"
+    },
+    "phonefield": {
+      "allowed_operators": ["is", "is_not", "contains", "not_contains", "is_empty", "is_not_empty"],
+      "note": "Text-like field, supports text operators"
+    },
+    "linkfield": {
+      "allowed_operators": ["is", "is_not", "contains", "not_contains", "is_empty", "is_not_empty"],
+      "note": "Text-like field, supports text operators"
+    },
+    "numberfield": {
+      "allowed_operators": ["is", "is_not", "greater_than", "less_than", "between", "not_between", "is_empty", "is_not_empty"],
+      "common_use_cases": {
+        "exact_value": "is",
+        "range_check": "between or not_between",
+        "threshold": "greater_than or less_than"
+      }
+    },
+    "currencyfield": {
+      "allowed_operators": ["is", "is_not", "greater_than", "less_than", "between", "not_between", "is_empty", "is_not_empty"],
+      "note": "Numeric field, same operators as numberfield"
+    },
+    "percentfield": {
+      "allowed_operators": ["is", "is_not", "greater_than", "less_than", "between", "not_between", "is_empty", "is_not_empty"],
+      "note": "Numeric field, same operators as numberfield"
+    },
+    "ratingfield": {
+      "allowed_operators": ["is", "is_not", "greater_than", "less_than", "between", "not_between", "is_empty", "is_not_empty"],
+      "note": "Numeric field, same operators as numberfield"
+    },
+    "datefield": {
+      "allowed_operators": ["is", "is_not", "is_before", "is_after", "is_between", "is_empty", "is_not_empty"],
+      "common_use_cases": {
+        "exact_date": "is",
+        "before_deadline": "is_before",
+        "after_start": "is_after",
+        "date_range": "is_between"
+      }
+    },
+    "daterangefield": {
+      "allowed_operators": ["is", "is_not", "is_before", "is_after", "is_between", "is_empty", "is_not_empty"],
+      "note": "Same operators as datefield, operates on range start/end"
+    },
+    "timefield": {
+      "allowed_operators": ["is", "is_not", "is_before", "is_after", "is_between", "is_empty", "is_not_empty"],
+      "note": "Time-based field, similar to date operators"
+    },
+    "statusfield": {
+      "allowed_operators": ["is", "is_not", "is_any_of", "is_none_of", "is_empty", "is_not_empty"],
+      "value_format": "option_code_not_label",
+      "pattern_reference": "RED_005",
+      "common_use_cases": {
+        "single_status": "is",
+        "multiple_options": "is_any_of",
+        "exclusion": "is_none_of"
+      },
+      "example": {
+        "wrong": {
+          "field": "status",
+          "comparison": "is",
+          "value": "In Progress"
+        },
+        "correct": {
+          "field": "status",
+          "comparison": "is",
+          "value": "in_progress"
+        }
+      }
+    },
+    "singleselectfield": {
+      "allowed_operators": ["is", "is_not", "is_any_of", "is_none_of", "is_empty", "is_not_empty"],
+      "value_format": "option_code_not_label",
+      "note": "Use option codes, not display labels"
+    },
+    "multipleselectfield": {
+      "allowed_operators": ["is", "is_not", "is_any_of", "is_none_of", "has_any_of", "has_all_of", "has_none_of", "is_empty", "is_not_empty"],
+      "value_format": "option_codes_array",
+      "note": "Use array of option codes for multi-value operators"
+    },
+    "checkboxfield": {
+      "allowed_operators": ["is", "is_not"],
+      "value_type": "boolean",
+      "example": {
+        "field": "is_active",
+        "comparison": "is",
+        "value": true
+      }
+    },
+    "userfield": {
+      "allowed_operators": ["is", "is_not", "is_any_of", "is_none_of", "is_empty", "is_not_empty"],
+      "value_format": "user_id",
+      "note": "Use user IDs, not user names"
+    }
+  },
+
+  "filter_construction_rules": {
+    "logical_operators": {
+      "and": "All conditions must match",
+      "or": "Any condition must match",
+      "nesting_supported": true
+    },
+    "value_format_requirements": {
+      "linked_records": "Array of record IDs",
+      "select_fields": "Option codes not labels",
+      "user_fields": "User IDs not names",
+      "date_fields": "ISO 8601 format",
+      "boolean_fields": "true/false not strings"
+    },
+    "common_mistakes": [
+      {
+        "mistake": "Using 'is' operator on linked record field",
+        "consequence": "Returns 0 results - silent failure",
+        "fix": "Use has_any_of with array of record IDs",
+        "pattern_reference": "RED_004"
+      },
+      {
+        "mistake": "Using display labels instead of option codes",
+        "consequence": "Filter fails or returns incorrect results",
+        "fix": "Fetch schema to get option codes, use codes in filter",
+        "pattern_reference": "RED_005"
+      },
+      {
+        "mistake": "Wrong value type (string instead of array)",
+        "consequence": "Type error or silent failure",
+        "fix": "Match value type to operator requirement"
+      }
+    ]
+  },
+
+  "validation_workflow": [
+    "1. Identify field type from schema",
+    "2. Check operator is allowed for that field type",
+    "3. Verify value format matches field type requirements",
+    "4. For select/status fields: ensure using option codes",
+    "5. For linked records: ensure using has_any_of/has_all_of/has_none_of",
+    "6. For date fields: ensure ISO 8601 format"
+  ],
+
+  "metadata": {
+    "field_types_covered": 16,
+    "critical_validations": 2,
+    "pattern_coverage": ["RED_004", "RED_005"],
+    "silent_failure_prevention": true
+  }
+}

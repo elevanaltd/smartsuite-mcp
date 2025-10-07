@@ -1,0 +1,113 @@
+{
+  "pattern_id": "YELLOW_002",
+  "schema_version": "2.0.0",
+  "pattern": "MCP_TOKEN_EXPLOSION",
+  "name": "MCP Context Window Token Explosion",
+  "safetyLevel": "YELLOW",
+  "severity": "WARNING",
+  "category": "performance_limits",
+
+  "triggers": [
+    {
+      "condition": "mcp_record_query",
+      "operations": ["list", "search", "get"],
+      "limit_check": {
+        "path": "payload.limit",
+        "operator": "greater_than",
+        "threshold": 2,
+        "context": "mcp_tool_usage"
+      }
+    }
+  ],
+
+  "failureModes": [
+    {
+      "description": "MCP tool responses exceed context window limits when querying too many records with rich field data",
+      "prevention": "Limit record queries to 2 records maximum for MCP operations. Use intelligent API for complex queries with automatic token management.",
+      "impact": "Context window overflow (25000+ tokens), MCP tool failure, potential data truncation, degraded agent performance."
+    }
+  ],
+
+  "validationRules": [
+    {
+      "rule_type": "mcp_limit_check",
+      "condition": "context === 'mcp_tool' AND payload.limit > 5",
+      "action": "WARN",
+      "message": "WARNING: MCP context overflow risk. Query limit is {limit} records. Evidence shows 52051 tokens from just 5 records. Reduce to 2 records maximum for safety."
+    },
+    {
+      "rule_type": "mcp_limit_check",
+      "condition": "context === 'mcp_tool' AND payload.limit > 2",
+      "action": "SUGGEST",
+      "message": "SUGGESTION: For MCP operations, use limit of 2 records maximum to prevent token explosion. Consider using intelligent API for larger queries with automatic token management."
+    }
+  ],
+
+  "correction": {
+    "description": "Apply appropriate token safety limits based on operation context",
+    "token_calculations": {
+      "average_per_record": "~10000 tokens (with rich fields like richtextareafield, linked records)",
+      "safe_mcp_limit": 2,
+      "context_window_budget": "~25000 tokens for MCP responses",
+      "evidence": "52051 tokens from 5 records = 10410 tokens/record average"
+    },
+    "safe_patterns": {
+      "mcp_standard_tools": {
+        "smartsuite_query": {
+          "recommended_limit": 2,
+          "max_safe_limit": 5,
+          "note": "Standard query tools have fixed token limits"
+        },
+        "smartsuite_schema": {
+          "token_impact": "unlimited",
+          "note": "Schema operations don't return record data, safe for unlimited use"
+        }
+      },
+      "mcp_intelligent_tool": {
+        "smartsuite_intelligent": {
+          "recommended_usage": "Complex queries requiring >2 records",
+          "token_management": "automatic",
+          "note": "Intelligent API manages tokens automatically, use for larger datasets"
+        }
+      }
+    },
+    "workflow": [
+      "1. Determine operation context (MCP tool vs direct API)",
+      "2. For MCP standard tools: limit to 2 records maximum",
+      "3. For queries needing >2 records: use intelligent API with automatic token management",
+      "4. For schema operations: unlimited (no record data)",
+      "5. Monitor token usage and adjust if needed"
+    ],
+    "tool_selection_guide": {
+      "use_standard_query": [
+        "Quick lookups (1-2 records)",
+        "Speed-critical operations (400-600ms)",
+        "Simple record retrieval"
+      ],
+      "use_intelligent_api": [
+        "Complex queries (>2 records needed)",
+        "Schema discovery with full field details",
+        "Error diagnosis requiring comprehensive analysis",
+        "Token management automatically handled"
+      ]
+    }
+  },
+
+  "evidence": {
+    "source": "API-LIMITATIONS-TRUTH.md:115-122",
+    "validation_date": "2025-10-06",
+    "production_evidence": "52051 tokens from just 5 records",
+    "severity_high": true
+  },
+
+  "metadata": {
+    "last_verified": "2025-10-06",
+    "affects_tools": [
+      "smartsuite_query",
+      "mcp standard tools"
+    ],
+    "workaround": "Use intelligent API for queries requiring >2 records",
+    "performance_impact": "high",
+    "token_budget_critical": true
+  }
+}

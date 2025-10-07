@@ -1,0 +1,140 @@
+{
+  "pattern_id": "YELLOW_006",
+  "schema_version": "2.0.0",
+  "pattern": "WRONG_HTTP_METHOD",
+  "name": "Wrong HTTP Method Errors",
+  "safetyLevel": "YELLOW",
+  "severity": "WARNING",
+  "category": "endpoint_format",
+
+  "triggers": [
+    {
+      "condition": "http_method_mismatch",
+      "common_errors": [
+        {
+          "endpoint": "/records",
+          "wrong_method": "GET",
+          "correct_method": "POST /records/list/"
+        },
+        {
+          "endpoint": "/records/{recordId}/",
+          "operation": "update",
+          "wrong_method": "PUT",
+          "correct_method": "PATCH"
+        }
+      ]
+    }
+  ],
+
+  "failureModes": [
+    {
+      "description": "404 Not Found or 405 Method Not Allowed when using wrong HTTP method for endpoint",
+      "prevention": "Use correct HTTP methods: POST for /list/, PATCH for updates, DELETE for deletion, GET for schema/single record retrieval",
+      "impact": "Operation fails with 404 or 405 error. No data modification occurs. Common mistake causing consistent failures."
+    }
+  ],
+
+  "validationRules": [
+    {
+      "rule_type": "method_endpoint_check",
+      "condition": "method === 'GET' AND endpoint.includes('/records') AND NOT endpoint.match(/\\/records\\/[a-f0-9]{24}\\/?$/)",
+      "action": "WARN",
+      "message": "WARNING: Cannot use GET for record listing. Use POST /applications/{appId}/records/list/ instead."
+    },
+    {
+      "rule_type": "method_endpoint_check",
+      "condition": "method === 'GET' AND endpoint.endsWith('/records')",
+      "action": "WARN",
+      "message": "WARNING: Endpoint /records does not support GET. Use POST /applications/{appId}/records/list/ for record listing."
+    },
+    {
+      "rule_type": "method_endpoint_check",
+      "condition": "method === 'PUT' AND endpoint.match(/\\/records\\/[a-f0-9]{24}/)",
+      "action": "SUGGEST",
+      "message": "SUGGESTION: Consider using PATCH instead of PUT for record updates (PATCH is standard method for SmartSuite updates)."
+    }
+  ],
+
+  "correction": {
+    "description": "Use correct HTTP methods for SmartSuite API operations",
+    "method_mappings": {
+      "list_records": {
+        "wrong": "GET /applications/{appId}/records",
+        "correct": "POST /applications/{appId}/records/list/",
+        "note": "No GET endpoint exists for record listing",
+        "frequency": "Daily occurrence in logs - very common mistake"
+      },
+      "get_single_record": {
+        "correct": "GET /applications/{appId}/records/{recordId}/",
+        "note": "GET is valid for single record retrieval only"
+      },
+      "create_record": {
+        "correct": "POST /applications/{appId}/records/",
+        "payload": "Record data in request body"
+      },
+      "update_record": {
+        "standard": "PATCH /applications/{appId}/records/{recordId}/",
+        "alternative": "PUT /applications/{appId}/records/{recordId}/",
+        "note": "PATCH is preferred for partial updates"
+      },
+      "delete_record": {
+        "correct": "DELETE /applications/{appId}/records/{recordId}/",
+        "note": "Requires trailing slash"
+      },
+      "bulk_operations": {
+        "bulk_create_update": "POST or PATCH /applications/{appId}/records/bulk/",
+        "bulk_delete": "DELETE /applications/{appId}/records/bulk_delete/"
+      },
+      "schema_retrieval": {
+        "correct": "GET /applications/{appId}/",
+        "note": "No /schema endpoint exists - use base application endpoint"
+      },
+      "field_operations": {
+        "create_field": "POST /applications/{appId}/add_field/",
+        "update_field": "PUT /applications/{appId}/change_field/",
+        "delete_field": "DELETE /applications/{appId}/delete_field/"
+      }
+    },
+    "examples": {
+      "listing_records_wrong": {
+        "method": "GET",
+        "endpoint": "/api/v1/applications/68abc123/records",
+        "error": "404 Not Found - endpoint doesn't exist for GET",
+        "frequency": "Daily occurrence"
+      },
+      "listing_records_correct": {
+        "method": "POST",
+        "endpoint": "/api/v1/applications/68abc123/records/list/",
+        "body": {
+          "limit": 100,
+          "offset": 0
+        },
+        "success": true
+      }
+    },
+    "quick_reference": {
+      "GET": ["Single record retrieval", "Schema retrieval", "Application metadata"],
+      "POST": ["Record creation", "Record listing", "Filtering/search", "Bulk create", "Field creation"],
+      "PATCH": ["Record updates", "Bulk updates"],
+      "PUT": ["Field updates", "Alternative for record updates"],
+      "DELETE": ["Record deletion", "Bulk deletion", "Field deletion"]
+    }
+  },
+
+  "evidence": {
+    "source": "API-LIMITATIONS-TRUTH.md:71-85",
+    "validation_date": "2025-10-06",
+    "production_evidence": "Daily occurrence in logs",
+    "common_mistake": "Using GET for /records instead of POST /records/list/",
+    "error_codes": ["404 Not Found", "405 Method Not Allowed"]
+  },
+
+  "metadata": {
+    "last_verified": "2025-10-06",
+    "frequency": "high",
+    "common_developer_mistake": true,
+    "affects_endpoints": "Multiple",
+    "workaround_available": true,
+    "performance_impact": "none when corrected"
+  }
+}

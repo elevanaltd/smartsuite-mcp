@@ -1,0 +1,154 @@
+{
+  "rule_set_id": "endpoint_validation_v2",
+  "version": "2.0.0",
+  "description": "Endpoint format and HTTP method validation rules for SmartSuite API",
+  "last_updated": "2025-10-06",
+
+  "endpoint_rules": {
+    "base_url": {
+      "correct": "https://app.smartsuite.com/api/v1/",
+      "common_error": "https://api.smartsuite.com/api/v1/",
+      "error_message": "DNS error - use app.smartsuite.com not api.smartsuite.com",
+      "severity": "BLOCKING"
+    },
+    "trailing_slash_required": {
+      "endpoints": [
+        "/applications/{appId}/records/{recordId}/",
+        "/applications/{appId}/records/list/",
+        "/applications/{appId}/records/bulk/",
+        "/applications/{appId}/records/bulk_delete/",
+        "/applications/{appId}/add_field/",
+        "/applications/{appId}/change_field/",
+        "/applications/{appId}/delete_field/"
+      ],
+      "validation": "endpoint.endsWith('/')",
+      "error_message": "Missing trailing slash causes 301 redirect or silent failure",
+      "severity": "BLOCKING",
+      "pattern_reference": "YELLOW_005",
+      "note": "DELETE and PATCH operations especially vulnerable to silent failures"
+    },
+    "http_method_requirements": {
+      "record_listing": {
+        "endpoint": "/applications/{appId}/records/list/",
+        "correct_method": "POST",
+        "common_error": "GET",
+        "error": "404 Not Found - must use POST for listing",
+        "severity": "BLOCKING",
+        "pattern_reference": "YELLOW_006"
+      },
+      "schema_retrieval": {
+        "endpoint": "/applications/{appId}/",
+        "correct_method": "GET",
+        "purpose": "Retrieve application schema and field definitions",
+        "note": "No /schema endpoint exists - use base application endpoint"
+      },
+      "record_get": {
+        "endpoint": "/applications/{appId}/records/{recordId}/",
+        "correct_method": "GET",
+        "purpose": "Retrieve single record"
+      },
+      "record_create": {
+        "endpoint": "/applications/{appId}/records/",
+        "correct_method": "POST",
+        "purpose": "Create new record"
+      },
+      "record_update": {
+        "endpoint": "/applications/{appId}/records/{recordId}/",
+        "correct_method": "PATCH",
+        "alternative_method": "PUT",
+        "preferred": "PATCH",
+        "note": "PATCH for partial updates, PUT for complete replacement"
+      },
+      "record_delete": {
+        "endpoint": "/applications/{appId}/records/{recordId}/",
+        "correct_method": "DELETE",
+        "trailing_slash_critical": true,
+        "note": "Missing slash causes silent failure"
+      },
+      "bulk_create_update": {
+        "endpoint": "/applications/{appId}/records/bulk/",
+        "create_method": "POST",
+        "update_method": "PATCH",
+        "max_records": 25
+      },
+      "bulk_delete": {
+        "endpoint": "/applications/{appId}/records/bulk_delete/",
+        "correct_method": "DELETE",
+        "max_records": 25
+      },
+      "field_create": {
+        "individual": "/applications/{appId}/add_field/",
+        "bulk": "/applications/{appId}/bulk-add-fields/",
+        "correct_method": "POST"
+      },
+      "field_update": {
+        "endpoint": "/applications/{appId}/change_field/",
+        "correct_method": "PUT"
+      },
+      "field_delete": {
+        "endpoint": "/applications/{appId}/delete_field/",
+        "correct_method": "DELETE"
+      }
+    },
+    "authentication_headers": {
+      "required": {
+        "Authorization": {
+          "format": "Token {api_key}",
+          "common_error": "Bearer {api_key}",
+          "error_message": "401 Unauthorized - use 'Token' not 'Bearer'",
+          "severity": "BLOCKING"
+        },
+        "ACCOUNT-ID": {
+          "format": "{workspace_id}",
+          "case_sensitive": true,
+          "error_message": "401 Unauthorized - exact header name required (all caps with hyphen)",
+          "severity": "BLOCKING"
+        },
+        "Content-Type": {
+          "json_requests": "application/json",
+          "file_uploads": "multipart/form-data"
+        }
+      }
+    }
+  },
+
+  "validation_workflow": [
+    "1. Verify base URL uses app.smartsuite.com",
+    "2. Check endpoint ends with trailing slash",
+    "3. Validate HTTP method matches endpoint purpose",
+    "4. Confirm authentication headers present and formatted correctly",
+    "5. Verify Content-Type header for request body"
+  ],
+
+  "common_errors": {
+    "wrong_base_url": {
+      "pattern": "api.smartsuite.com",
+      "fix": "app.smartsuite.com",
+      "error_type": "DNS resolution failure"
+    },
+    "missing_trailing_slash": {
+      "pattern": "/records/{recordId}",
+      "fix": "/records/{recordId}/",
+      "error_type": "301 redirect or silent failure",
+      "pattern_reference": "YELLOW_005"
+    },
+    "wrong_http_method": {
+      "pattern": "GET /records",
+      "fix": "POST /records/list/",
+      "error_type": "404 Not Found",
+      "pattern_reference": "YELLOW_006"
+    },
+    "wrong_auth_format": {
+      "pattern": "Authorization: Bearer {key}",
+      "fix": "Authorization: Token {key}",
+      "error_type": "401 Unauthorized"
+    }
+  },
+
+  "metadata": {
+    "total_endpoints": 15,
+    "blocking_validations": 5,
+    "pattern_coverage": ["YELLOW_005", "YELLOW_006"],
+    "common_mistakes_documented": 4
+  }
+}

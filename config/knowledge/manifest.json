@@ -50,11 +50,106 @@
         "safetyLevel": "RED"
       }
     ],
-    "yellow": [],
-    "green": []
+    "yellow": [
+      {
+        "id": "YELLOW_001",
+        "pattern": "BULK_OPERATION_LIMITS",
+        "name": "Bulk Operation Record Limits",
+        "file": "patterns/yellow/bulk-limits.json",
+        "safetyLevel": "YELLOW"
+      },
+      {
+        "id": "YELLOW_002",
+        "pattern": "MCP_TOKEN_EXPLOSION",
+        "name": "MCP Context Window Token Explosion",
+        "file": "patterns/yellow/mcp-token-explosion.json",
+        "safetyLevel": "YELLOW"
+      },
+      {
+        "id": "YELLOW_003",
+        "pattern": "RATE_LIMITING",
+        "name": "API Rate Limiting and Throttling",
+        "file": "patterns/yellow/rate-limiting.json",
+        "safetyLevel": "YELLOW"
+      },
+      {
+        "id": "YELLOW_004",
+        "pattern": "FIELD_POSITIONING_ERROR",
+        "name": "Field Positioning prev_sibling_slug Null Error",
+        "file": "patterns/yellow/field-positioning.json",
+        "safetyLevel": "YELLOW"
+      },
+      {
+        "id": "YELLOW_005",
+        "pattern": "TRAILING_SLASH_MISSING",
+        "name": "Missing Trailing Slash Silent Failures",
+        "file": "patterns/yellow/trailing-slash.json",
+        "safetyLevel": "YELLOW"
+      },
+      {
+        "id": "YELLOW_006",
+        "pattern": "WRONG_HTTP_METHOD",
+        "name": "Wrong HTTP Method Errors",
+        "file": "patterns/yellow/wrong-http-method.json",
+        "safetyLevel": "YELLOW"
+      }
+    ],
+    "green": [
+      {
+        "id": "GREEN_001",
+        "pattern": "FIELD_CREATION_WORKING",
+        "name": "Field Creation Operations - Fully Functional",
+        "file": "patterns/green/field-creation.json",
+        "safetyLevel": "GREEN"
+      },
+      {
+        "id": "GREEN_002",
+        "pattern": "FIELD_UPDATES_WORKING",
+        "name": "Field Update Operations with UUID Preservation",
+        "file": "patterns/green/field-updates.json",
+        "safetyLevel": "GREEN"
+      },
+      {
+        "id": "GREEN_003",
+        "pattern": "RECORD_OPERATIONS_WORKING",
+        "name": "Record CRUD Operations - Fully Functional",
+        "file": "patterns/green/record-operations.json",
+        "safetyLevel": "GREEN"
+      },
+      {
+        "id": "GREEN_004",
+        "pattern": "FILTERING_OPERATIONS_WORKING",
+        "name": "Filtering and Search Operations - Fully Functional",
+        "file": "patterns/green/filtering.json",
+        "safetyLevel": "GREEN"
+      },
+      {
+        "id": "GREEN_005",
+        "pattern": "BULK_OPERATIONS_WORKING",
+        "name": "Bulk Record Operations - Fully Functional",
+        "file": "patterns/green/bulk-operations.json",
+        "safetyLevel": "GREEN"
+      }
+    ]
   },
 
-  "validation_rules": [],
+  "validation_rules": [
+    {
+      "name": "Format Validation",
+      "file": "rules/format-validation.json",
+      "description": "Field format validation rules for all field types"
+    },
+    {
+      "name": "Endpoint Validation",
+      "file": "rules/endpoint-validation.json",
+      "description": "Endpoint format and HTTP method validation rules"
+    },
+    {
+      "name": "Operator Validation",
+      "file": "rules/operator-validation.json",
+      "description": "Filter operator validation rules by field type"
+    }
+  ],
 
   "loading": {
     "strategy": "eager",

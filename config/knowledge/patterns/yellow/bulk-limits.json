@@ -1,0 +1,100 @@
+{
+  "pattern_id": "YELLOW_001",
+  "schema_version": "2.0.0",
+  "pattern": "BULK_OPERATION_LIMITS",
+  "name": "Bulk Operation Record Limits",
+  "safetyLevel": "YELLOW",
+  "severity": "WARNING",
+  "category": "api_limits",
+
+  "triggers": [
+    {
+      "condition": "bulk_operation",
+      "endpoint_patterns": [
+        "/records/bulk/",
+        "/records/bulk_delete/"
+      ],
+      "record_count_check": {
+        "path": "payload.items.length",
+        "operator": "greater_than",
+        "threshold": 25
+      }
+    }
+  ],
+
+  "failureModes": [
+    {
+      "description": "Bulk operations fail when attempting to process more than 25 records in a single request",
+      "prevention": "Batch large operations into groups of 20 records (safety margin below the 25-record hard limit)",
+      "impact": "API rejects entire bulk operation. Must split into smaller batches and retry with proper delays."
+    }
+  ],
+
+  "validationRules": [
+    {
+      "rule_type": "array_length_check",
+      "condition": "payload.items.length > 25",
+      "action": "WARN",
+      "message": "WARNING: Bulk operation limit is 25 records maximum. Request contains {count} records. Split into batches of 20 records with 250ms delays between batches."
+    },
+    {
+      "rule_type": "array_length_check",
+      "condition": "payload.items.length > 20",
+      "action": "SUGGEST",
+      "message": "SUGGESTION: Request contains {count} records. Consider batching at 20 records for safety margin below 25-record limit."
+    }
+  ],
+
+  "correction": {
+    "description": "Batch large operations into groups of 20 records with rate limiting delays",
+    "workflow": [
+      "1. Split record array into batches of 20 records maximum",
+      "2. Process first batch with bulk operation",
+      "3. Wait 250ms minimum between batches",
+      "4. Continue with remaining batches sequentially",
+      "5. Aggregate results from all batches"
+    ],
+    "limits": {
+      "bulk_create": {
+        "max_records": 25,
+        "endpoint": "/applications/{appId}/records/bulk/",
+        "method": "POST",
+        "recommended_batch_size": 20
+      },
+      "bulk_update": {
+        "max_records": 25,
+        "endpoint": "/applications/{appId}/records/bulk/",
+        "method": "PATCH",
+        "recommended_batch_size": 20
+      },
+      "bulk_delete": {
+        "max_records": 25,
+        "endpoint": "/applications/{appId}/records/bulk_delete/",
+        "method": "DELETE",
+        "recommended_batch_size": 20
+      }
+    },
+    "example_batching": {
+      "scenario": "100 records to update",
+      "approach": "5 batches of 20 records each",
+      "timing": "250ms delay between batches = 1.25 seconds total delay",
+      "total_time": "~3-5 seconds for complete operation"
+    }
+  },
+
+  "evidence": {
+    "source": "API-LIMITATIONS-TRUTH.md:124-130",
+    "validation_date": "2025-10-06",
+    "production_validated": true
+  },
+
+  "metadata": {
+    "last_verified": "2025-10-06",
+    "affects_endpoints": [
+      "/applications/{appId}/records/bulk/",
+      "/applications/{appId}/records/bulk_delete/"
+    ],
+    "workaround_available": true,
+    "performance_impact": "low"
+  }
+}

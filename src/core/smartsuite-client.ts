@@ -270,21 +270,24 @@ export function createClient(apiKey: string, workspaceId: string, baseUrl: strin
     },
 
     async countRecords(appId: string, options?: SmartSuiteListOptions): Promise<number> {
-      // SMARTSUITE API CONTRACT: Count uses /records/list/ with count_only flag
-      // REFERENCE: API-CAPABILITIES-TRUTH.md L214-220
-      // EVIDENCE: No separate /records/count/ endpoint exists
+      // SMARTSUITE API CONTRACT: Count uses /records/list/ endpoint
+      // REALITY: API ignores count_only flag and returns full records
+      // WORKAROUND: Extract count from result.total field
+      // REFERENCE: Empirical validation 2025-10-07 (GAP-004)
       const requestData = {
-        count_only: true, // ✅ Required flag for count operation
+        count_only: true, // Flag sent but ignored by API
         ...(options?.filter && { filter: options.filter }),
       };
 
       const result = await makeRequest(
-        `/applications/${appId}/records/list/`, // ✅ Uses list endpoint, not count
+        `/applications/${appId}/records/list/`,
         'POST',
         requestData,
       );
 
-      return (result as { count: number }).count;
+      // Extract count from result.total (not result.count which doesn't exist)
+      const countValue = (result as { total: number }).total;
+      return countValue;
     },
 
     async request(options: SmartSuiteRequestOptions): Promise<unknown> {
@@ -324,7 +327,7 @@ export function createClient(apiKey: string, workspaceId: string, baseUrl: strin
 
       // Diagnostic logging - track API payload
       // eslint-disable-next-line no-console
-      console.log('[SMARTSUITE-CLIENT] Sending to API:', JSON.stringify(apiPayload, null, 2));
+      console.error('[SMARTSUITE-CLIENT] Sending to API:', JSON.stringify(apiPayload, null, 2));
 
       return makeRequest(`/applications/${appId}/add_field/`, 'POST', apiPayload);
     },
@@ -366,11 +369,11 @@ export function createClient(apiKey: string, workspaceId: string, baseUrl: strin
 
       // Diagnostic logging - track API payload
       // eslint-disable-next-line no-console
-      console.log('[SMARTSUITE-CLIENT] Current field:', JSON.stringify(currentField, null, 2));
+      console.error('[SMARTSUITE-CLIENT] Current field:', JSON.stringify(currentField, null, 2));
       // eslint-disable-next-line no-console
-      console.log('[SMARTSUITE-CLIENT] Updates provided:', JSON.stringify(updates, null, 2));
+      console.error('[SMARTSUITE-CLIENT] Updates provided:', JSON.stringify(updates, null, 2));
       // eslint-disable-next-line no-console
-      console.log('[SMARTSUITE-CLIENT] Sending complete payload to API:', JSON.stringify(apiPayload, null, 2));
+      console.error('[SMARTSUITE-CLIENT] Sending complete payload to API:', JSON.stringify(apiPayload, null, 2));
 
       return makeRequest(`/applications/${appId}/change_field/`, 'PUT', apiPayload);
     },

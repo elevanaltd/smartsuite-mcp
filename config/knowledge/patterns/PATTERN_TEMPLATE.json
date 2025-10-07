@@ -1,0 +1,70 @@
+{
+  "pattern_id": "SEVERITY_XXX",
+  "schema_version": "2.0.0",
+  "pattern": "PATTERN_NAME_UPPERCASE",
+  "name": "Human Readable Pattern Name",
+  "safetyLevel": "RED",
+  "severity": "BLOCKING",
+  "category": "data_loss",
+
+  "triggers": [
+    {
+      "condition": "operation_type",
+      "endpoint_match": "/endpoint/path/",
+      "parameter_check": {
+        "path": "payload.params.field",
+        "operator": "exists",
+        "AND": {
+          "path": "payload.params.other_field",
+          "operator": "not_exists"
+        }
+      }
+    }
+  ],
+
+  "failureModes": [
+    {
+      "description": "Specific failure scenario that causes data loss/corruption",
+      "prevention": "How to avoid this failure mode",
+      "impact": "Concrete impact on data/operations"
+    }
+  ],
+
+  "validationRules": [
+    {
+      "rule_type": "property_check",
+      "condition": "payload.params.options exists",
+      "action": "BLOCK",
+      "message": "BLOCKING: User-facing guidance message with safe alternative"
+    }
+  ],
+
+  "correction": {
+    "description": "Safe way to perform this operation",
+    "workflow": [
+      "Step 1: Action to take",
+      "Step 2: Next action",
+      "Step 3: Final validation"
+    ],
+    "example": {
+      "method": "PUT",
+      "endpoint": "/applications/{appId}/endpoint/",
+      "payload": {}
+    },
+    "requirements": [
+      "MUST preserve existing data",
+      "MUST validate before execution"
+    ]
+  },
+
+  "evidence": {
+    "incident_date": "YYYY-MM",
+    "production_validated": true,
+    "source": "FILENAME.md:LINE-LINE"
+  },
+
+  "metadata": {
+    "last_verified": "2025-10-06",
+    "production_incidents": 0
+  }
+}

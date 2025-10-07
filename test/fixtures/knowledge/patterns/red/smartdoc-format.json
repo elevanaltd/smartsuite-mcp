@@ -1,0 +1,23 @@
+{
+  "pattern_id": "RED_003",
+  "schema_version": "2.0.0",
+  "pattern": "SMARTDOC_FORMAT",
+  "name": "SmartDoc Format Requirement",
+  "safetyLevel": "RED",
+  "severity": "BLOCKING",
+  "category": "data_format",
+
+  "failureModes": [
+    {
+      "description": "Using plain string for rich text fields requires SmartDoc format structure",
+      "prevention": "Use SmartDoc structure with data/html/preview",
+      "impact": "Data not saved, API returns 200 but no data written"
+    }
+  ],
+
+  "validationRules": [],
+
+  "correction": {
+    "format": "smartdoc"
+  }
+}

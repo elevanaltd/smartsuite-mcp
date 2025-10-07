@@ -1,0 +1,192 @@
+{
+  "pattern_id": "GREEN_005",
+  "schema_version": "2.0.0",
+  "pattern": "BULK_OPERATIONS_WORKING",
+  "name": "Bulk Record Operations - Fully Functional",
+  "safetyLevel": "GREEN",
+  "severity": "SAFE",
+  "category": "validated_operation",
+
+  "status": "production_validated",
+  "last_verified": "2025-10-06",
+
+  "endpoints": {
+    "bulk_create": {
+      "method": "POST",
+      "path": "/api/v1/applications/{appId}/records/bulk/",
+      "status": "fully_functional",
+      "performance": "600-850ms",
+      "limit": 25,
+      "evidence": "API-CAPABILITIES-TRUTH.md:67-72"
+    },
+    "bulk_update": {
+      "method": "PATCH",
+      "path": "/api/v1/applications/{appId}/records/bulk/",
+      "status": "fully_functional",
+      "performance": "600-850ms",
+      "limit": 25,
+      "evidence": "API-CAPABILITIES-TRUTH.md:74-79, operation-templates.json"
+    },
+    "bulk_delete": {
+      "method": "DELETE",
+      "path": "/api/v1/applications/{appId}/records/bulk_delete/",
+      "status": "fully_functional",
+      "performance": "600-850ms",
+      "limit": 25,
+      "evidence": "API-CAPABILITIES-TRUTH.md:81-86"
+    }
+  },
+
+  "failureModes": [],
+
+  "validationRules": [
+    {
+      "rule_type": "batch_size_check",
+      "condition": "bulk operations",
+      "limit": 25,
+      "action": "VALIDATE",
+      "message": "Bulk operations limited to 25 records maximum. See YELLOW_001 for batching strategy when >25 records needed.",
+      "reference_pattern": "YELLOW_001 (Bulk Operation Limits)"
+    },
+    {
+      "rule_type": "rate_limiting_check",
+      "condition": "sequential bulk operations",
+      "requirement": "250ms minimum delay between requests",
+      "action": "VALIDATE",
+      "message": "Bulk operations require 250ms delays between requests. See YELLOW_003 for rate limiting compliance.",
+      "reference_pattern": "YELLOW_003 (Rate Limiting)"
+    },
+    {
+      "rule_type": "format_compliance_check",
+      "condition": "bulk operations with complex field types",
+      "requirements": [
+        "Linked records: array format required",
+        "Rich text: SmartDoc structure required",
+        "Status/select fields: option codes required"
+      ],
+      "action": "VALIDATE",
+      "message": "Bulk operations must comply with field format requirements. See RED patterns for critical formats.",
+      "reference_patterns": ["RED_002", "RED_003", "RED_005"]
+    }
+  ],
+
+  "correction": {
+    "description": "Production-validated patterns for successful bulk operations with proper batching and rate limiting",
+    "bulk_create": {
+      "method": "POST",
+      "endpoint": "/api/v1/applications/{appId}/records/bulk/",
+      "payload": {
+        "items": [
+          {
+            "field1": "value1",
+            "linked_field": ["record_id"],
+            "status_field": "option_code"
+          },
+          {
+            "field1": "value2",
+            "linked_field": ["record_id2"],
+            "status_field": "option_code2"
+          }
+        ]
+      },
+      "max_items": 25,
+      "note": "Each item represents one record to create"
+    },
+    "bulk_update": {
+      "method": "PATCH",
+      "endpoint": "/api/v1/applications/{appId}/records/bulk/",
+      "payload": {
+        "items": [
+          {
+            "id": "record_id_1",
+            "field_to_update": "new_value"
+          },
+          {
+            "id": "record_id_2",
+            "field_to_update": "new_value2"
+          }
+        ]
+      },
+      "max_items": 25,
+      "note": "Each item must include record ID and fields to update"
+    },
+    "bulk_delete": {
+      "method": "DELETE",
+      "endpoint": "/api/v1/applications/{appId}/records/bulk_delete/",
+      "payload": {
+        "record_ids": [
+          "record_id_1",
+          "record_id_2",
+          "record_id_3"
+        ]
+      },
+      "max_items": 25,
+      "note": "Array of record IDs to delete"
+    },
+    "batching_strategy": {
+      "description": "When processing more than 25 records",
+      "workflow": [
+        "1. Split records into batches of 20 (safety margin)",
+        "2. Process first batch with bulk operation",
+        "3. Wait 250ms minimum before next batch",
+        "4. Continue with remaining batches sequentially",
+        "5. Aggregate results from all batches"
+      ],
+      "example": {
+        "total_records": 100,
+        "batch_size": 20,
+        "number_of_batches": 5,
+        "delay_between_batches": "250ms",
+        "total_delay": "1.25 seconds",
+        "total_operation_time": "~5-7 seconds"
+      },
+      "reference_pattern": "YELLOW_001 (Bulk Operation Limits) for detailed batching guidance"
+    },
+    "rate_limiting_compliance": {
+      "minimum_delay": "250ms between bulk requests",
+      "backoff_on_429": "30 seconds (non-standard)",
+      "reference_pattern": "YELLOW_003 (Rate Limiting)"
+    },
+    "field_format_requirements": {
+      "linked_records": {
+        "format": "array",
+        "example": {"project_id": ["68a8ff5237fde0bf797c05b3"]},
+        "reference": "RED_002"
+      },
+      "rich_text": {
+        "format": "SmartDoc structure",
+        "example": {"data": {}, "html": "", "preview": ""},
+        "reference": "RED_003"
+      },
+      "status_select_fields": {
+        "format": "option codes not labels",
+        "example": {"status": "in_progress"},
+        "reference": "RED_005"
+      }
+    },
+    "performance_optimization": {
+      "prefer_bulk_over_individual": "1 bulk call (600-850ms) vs 20 individual calls (8-14 seconds)",
+      "efficiency_gain": "90%+ reduction in API calls and total time",
+      "recommendation": "Always use bulk operations when modifying multiple records"
+    }
+  },
+
+  "evidence": {
+    "source": "API-CAPABILITIES-TRUTH.md:65-86",
+    "validation_date": "2025-10-06",
+    "production_validated": true,
+    "confirmed_working": "All bulk operations fully functional",
+    "performance_verified": "600-850ms for bulk operations"
+  },
+
+  "metadata": {
+    "last_verified": "2025-10-06",
+    "production_status": "stable",
+    "performance_rating": "excellent",
+    "reliability_rating": "high",
+    "efficiency_improvement": "90%+ vs individual operations",
+    "max_batch_size": 25,
+    "recommended_batch_size": 20,
+    "rate_limiting_critical": true
+  }
+}

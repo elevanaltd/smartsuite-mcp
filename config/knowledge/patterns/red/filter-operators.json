@@ -1,0 +1,97 @@
+{
+  "pattern_id": "RED_004",
+  "schema_version": "2.0.0",
+  "pattern": "WRONG_FILTER_OPERATORS",
+  "name": "Filter Operator Requirements by Field Type",
+  "safetyLevel": "RED",
+  "severity": "BLOCKING",
+  "category": "silent_failure",
+
+  "triggers": [
+    {
+      "condition": "filter_operation",
+      "endpoint_match": "/records/list/",
+      "parameter_check": {
+        "path": "payload.filter.fields.comparison",
+        "operator": "equals",
+        "value": "is",
+        "AND": {
+          "path": "payload.filter.fields.field_type",
+          "operator": "equals",
+          "value": "linkedrecordfield"
+        }
+      }
+    }
+  ],
+
+  "failureModes": [
+    {
+      "description": "Using 'is', 'contains', or 'equals' operators for linked record filters returns 0 results silently",
+      "prevention": "Use has_any_of, has_all_of, or has_none_of operators for linkedrecordfield filters",
+      "impact": "Query returns empty result set with no error. Appears as 'no matching records' when records actually exist."
+    }
+  ],
+
+  "validationRules": [
+    {
+      "rule_type": "property_check",
+      "condition": "filter comparison is 'is' OR 'contains' OR 'equals' for linkedrecordfield",
+      "action": "BLOCK",
+      "message": "BLOCKING: Linked record filters require has_any_of/has_all_of/has_none_of operators. Using 'is' returns 0 results (silent failure)."
+    }
+  ],
+
+  "correction": {
+    "description": "Use correct filter operators based on field type",
+    "workflow": [
+      "1. Identify field type from schema",
+      "2. Match operator to field type requirements",
+      "3. Convert 'is' to 'has_any_of' for linked records",
+      "4. Validate operator is in allowed list for field type"
+    ],
+    "example": {
+      "wrong": {
+        "filter": {
+          "operator": "and",
+          "fields": [
+            {
+              "field": "projects_link",
+              "comparison": "is",
+              "value": ["project_id"]
+            }
+          ]
+        }
+      },
+      "correct": {
+        "filter": {
+          "operator": "and",
+          "fields": [
+            {
+              "field": "projects_link",
+              "comparison": "has_any_of",
+              "value": ["project_id"]
+            }
+          ]
+        }
+      }
+    },
+    "requirements": [
+      "linkedrecordfield: MUST use has_any_of/has_all_of/has_none_of",
+      "textfield: Use is/is_not/contains/not_contains",
+      "numberfield: Use is/is_not/greater_than/less_than",
+      "Check schema for field type before applying filter"
+    ]
+  },
+
+  "evidence": {
+    "incident_date": "2025-01",
+    "production_validated": true,
+    "source": "CRITICAL-FORMATS-TRUTH.md:121-169"
+  },
+
+  "metadata": {
+    "last_verified": "2025-10-06",
+    "silent_failure": true,
+    "frequency": "common_mistake"
+  }
+}

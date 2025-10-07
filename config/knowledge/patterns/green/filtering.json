@@ -1,0 +1,200 @@
+{
+  "pattern_id": "GREEN_004",
+  "schema_version": "2.0.0",
+  "pattern": "FILTERING_OPERATIONS_WORKING",
+  "name": "Filtering and Search Operations - Fully Functional",
+  "safetyLevel": "GREEN",
+  "severity": "SAFE",
+  "category": "validated_operation",
+
+  "status": "production_validated",
+  "last_verified": "2025-10-06",
+
+  "endpoints": {
+    "list_with_filters": {
+      "method": "POST",
+      "path": "/api/v1/applications/{appId}/records/list/",
+      "status": "fully_functional",
+      "performance": "400-600ms",
+      "evidence": "API-CAPABILITIES-TRUTH.md:194-203, extensive production usage"
+    },
+    "search_records": {
+      "method": "POST",
+      "path": "/api/v1/applications/{appId}/records/search/",
+      "status": "functional for text matching",
+      "performance": "400-700ms",
+      "evidence": "API-CAPABILITIES-TRUTH.md:205-212"
+    },
+    "count_records": {
+      "method": "POST",
+      "path": "/api/v1/applications/{appId}/records/list/",
+      "body_param": "count_only: true",
+      "status": "efficient counting without data retrieval",
+      "performance": "200-400ms",
+      "evidence": "API-CAPABILITIES-TRUTH.md:214-220"
+    }
+  },
+
+  "failureModes": [],
+
+  "validationRules": [
+    {
+      "rule_type": "operator_field_type_match",
+      "condition": "filtering operations",
+      "requirements": [
+        "TEXT FIELDS: use is, is_not, contains, not_contains, is_empty, is_not_empty",
+        "LINKED RECORDS: use has_any_of, has_all_of, has_none_of (NEVER 'is' or 'contains')",
+        "SELECT FIELDS: use is, is_not, is_any_of, is_none_of",
+        "NUMBER FIELDS: use is, is_not, greater_than, less_than, between, not_between"
+      ],
+      "action": "VALIDATE",
+      "message": "Filter operators must match field type. Using wrong operator causes silent failures or zero results."
+    }
+  ],
+
+  "correction": {
+    "description": "Production-validated patterns for successful filtering and search operations",
+    "comparison_operators_by_field_type": {
+      "text_fields": {
+        "supported_operators": ["is", "is_not", "contains", "not_contains", "is_empty", "is_not_empty"],
+        "field_types": ["textfield", "textareafield", "emailfield", "phonefield", "linkfield"],
+        "example": {
+          "field": "title",
+          "comparison": "contains",
+          "value": "search term"
+        }
+      },
+      "linked_record_fields": {
+        "supported_operators": ["has_any_of", "has_all_of", "has_none_of"],
+        "forbidden_operators": ["is", "contains", "equals"],
+        "critical_note": "Using 'is' returns 0 results - silent failure",
+        "field_types": ["linkedrecordfield"],
+        "example": {
+          "field": "project_id",
+          "comparison": "has_any_of",
+          "value": ["68a8ff5237fde0bf797c05b3"]
+        },
+        "reference_pattern": "RED_004 (Wrong Filter Operators)"
+      },
+      "select_fields": {
+        "supported_operators": ["is", "is_not", "is_any_of", "is_none_of"],
+        "field_types": ["singleselectfield", "multipleselectfield", "statusfield"],
+        "example": {
+          "field": "status",
+          "comparison": "is",
+          "value": "active"
+        },
+        "note": "Use option codes not display labels"
+      },
+      "number_fields": {
+        "supported_operators": ["is", "is_not", "greater_than", "less_than", "between", "not_between"],
+        "field_types": ["numberfield", "currencyfield", "percentfield", "ratingfield"],
+        "example": {
+          "field": "price",
+          "comparison": "greater_than",
+          "value": 100
+        }
+      },
+      "date_fields": {
+        "supported_operators": ["is", "is_not", "is_before", "is_after", "is_between", "is_empty", "is_not_empty"],
+        "field_types": ["datefield", "daterangefield", "timefield"],
+        "example": {
+          "field": "created_date",
+          "comparison": "is_after",
+          "value": "2025-01-01"
+        }
+      }
+    },
+    "complex_filtering_example": {
+      "method": "POST",
+      "endpoint": "/api/v1/applications/{appId}/records/list/",
+      "payload": {
+        "limit": 100,
+        "offset": 0,
+        "filter": {
+          "operator": "and",
+          "fields": [
+            {
+              "field": "status",
+              "comparison": "is",
+              "value": "active"
+            },
+            {
+              "field": "project_id",
+              "comparison": "has_any_of",
+              "value": ["68a8ff5237fde0bf797c05b3"]
+            },
+            {
+              "field": "title",
+              "comparison": "contains",
+              "value": "important"
+            }
+          ]
+        }
+      },
+      "evidence": "Production usage across EAV applications"
+    },
+    "search_operation": {
+      "method": "POST",
+      "endpoint": "/api/v1/applications/{appId}/records/search/",
+      "payload": {
+        "query": "search term",
+        "limit": 100
+      },
+      "note": "Full-text search across multiple fields, different from filtering"
+    },
+    "count_operation": {
+      "method": "POST",
+      "endpoint": "/api/v1/applications/{appId}/records/list/",
+      "payload": {
+        "count_only": true,
+        "filter": {
+          "operator": "and",
+          "fields": []
+        }
+      },
+      "note": "Efficient counting without retrieving full record data",
+      "performance": "Fast - does not transfer record content"
+    },
+    "filter_logic_operators": {
+      "and": "All conditions must match",
+      "or": "Any condition must match",
+      "nesting": "Filters can be nested for complex logic",
+      "example_nested": {
+        "operator": "or",
+        "fields": [
+          {
+            "operator": "and",
+            "fields": [
+              {"field": "status", "comparison": "is", "value": "active"},
+              {"field": "priority", "comparison": "is", "value": "high"}
+            ]
+          },
+          {
+            "field": "urgent_flag",
+            "comparison": "is",
+            "value": true
+          }
+        ]
+      }
+    }
+  },
+
+  "evidence": {
+    "source": "API-CAPABILITIES-TRUTH.md:194-220",
+    "validation_date": "2025-10-06",
+    "production_validated": true,
+    "extensive_usage": "Production filtering across EAV applications",
+    "all_operators_functional": true
+  },
+
+  "metadata": {
+    "last_verified": "2025-10-06",
+    "production_status": "stable",
+    "performance_rating": "excellent",
+    "reliability_rating": "high",
+    "complex_filtering_supported": true,
+    "nested_logic_supported": true,
+    "critical_note": "Wrong operators on linked records cause silent failures - see RED_004"
+  }
+}

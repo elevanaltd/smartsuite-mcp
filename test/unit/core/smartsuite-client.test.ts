@@ -929,7 +929,7 @@ describe('SmartSuiteClient - Authentication (AUTH-001, AUTH-002)', () => {
         .mockResolvedValueOnce({
           ok: true,
           status: 200,
-          json: async () => ({ count: 42 }),
+          json: async () => ({ total: 42 }),
         });
       global.fetch = mockFetch as unknown as typeof fetch;
 
@@ -946,6 +946,54 @@ describe('SmartSuiteClient - Authentication (AUTH-001, AUTH-002)', () => {
 
       // Assert
       expect(count).toBe(42);
+    });
+
+    it('should use /records/list/ endpoint with count_only flag per SmartSuite API contract', async () => {
+      // CONTRACT: Count uses /records/list/ with {"count_only": true}, NOT /records/count/
+      // EVIDENCE: API-CAPABILITIES-TRUTH.md L214-220
+      // EXPECT: POST to /records/list/ with count_only flag
+
+      // Arrange
+      const mockFetch = vi.fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ applications: [] }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ total: 42 }),
+        });
+      global.fetch = mockFetch as unknown as typeof fetch;
+
+      const { createAuthenticatedClient } = await import('../../../src/core/smartsuite-client.js');
+      const client = await createAuthenticatedClient({
+        apiKey: 'test-key',
+        workspaceId: 'test-workspace',
+      });
+
+      // Act
+      const count = await client.countRecords('app-123', {
+        filter: { status: 'active' },
+      });
+
+      // Assert - Verify correct endpoint and payload
+      expect(count).toBe(42);
+      expect(mockFetch).toHaveBeenCalledTimes(2); // Auth + count request
+
+      // Verify second call (count operation) uses correct endpoint and payload
+      const countCall = mockFetch.mock.calls[1];
+      expect(countCall).toBeDefined();
+      if (!countCall) throw new Error('Count call not found');
+
+      const [url, options] = countCall;
+      expect(url).toBe('https://app.smartsuite.com/api/v1/applications/app-123/records/list/');
+      expect(options).toBeDefined();
+
+      const parsedBody = JSON.parse((options as { body?: string })?.body ?? '{}');
+      expect(parsedBody.count_only).toBe(true);
+      expect(parsedBody.filter).toEqual({ status: 'active' });
     });
   });
 
@@ -1005,6 +1053,7 @@ describe('SmartSuiteClient - Authentication (AUTH-001, AUTH-002)', () => {
     it('should update field with updateField() method', async () => {
       // CONTRACT: updateField() modifies existing field configuration
       // EXPECT: Returns updated field configuration
+      // IMPLEMENTATION: Fetch schema first, merge updates, send complete payload
 
       // Arrange
       const mockFetch = vi.fn()
@@ -1013,6 +1062,22 @@ describe('SmartSuiteClient - Authentication (AUTH-001, AUTH-002)', () => {
           status: 200,
           json: async () => ({ applications: [] }),
         })
+        // Mock schema fetch (required for fetching current field definition)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            structure: [
+              {
+                slug: 'field_123',
+                label: 'Original Label',
+                field_type: 'textfield',
+                params: {},
+              },
+            ],
+          }),
+        })
+        // Mock field update response
         .mockResolvedValueOnce({
           ok: true,
           status: 200,
@@ -1020,7 +1085,7 @@ describe('SmartSuiteClient - Authentication (AUTH-001, AUTH-002)', () => {
             id: 'field_123',
             field_type: 'textfield',
             label: 'Updated Field',
-            slug: 'test_field',
+            slug: 'field_123',
           }),
         });
       global.fetch = mockFetch as unknown as typeof fetch;
@@ -1040,13 +1105,29 @@ describe('SmartSuiteClient - Authentication (AUTH-001, AUTH-002)', () => {
       expect(result).toHaveProperty('id', 'field_123');
       expect(result).toHaveProperty('label', 'Updated Field');
 
-      // Assert - Correct API endpoint called
-      const fieldUpdateCall = mockFetch.mock.calls[1];
+      // Assert - Schema fetch happened (call index 1, after auth)
+      const schemaCall = mockFetch.mock.calls[1];
+      if (!schemaCall?.[0]) {
+        throw new Error('Test setup failed: schema fetch call not found');
+      }
+      expect(schemaCall[0]).toContain('/api/v1/applications/app-123/');
+      expect(schemaCall[1]?.method).toBe('GET');
+
+      // Assert - Correct API endpoint called for update (call index 2)
+      const fieldUpdateCall = mockFetch.mock.calls[2];
       if (!fieldUpdateCall?.[0]) {
         throw new Error('Test setup failed: updateField call not found');
       }
       expect(fieldUpdateCall[0]).toContain('/api/v1/applications/app-123/change_field/');
-      expect(fieldUpdateCall[1]?.method).toBe('POST');
+      expect(fieldUpdateCall[0]).not.toContain('field_123'); // Field ID should NOT be in URL
+      expect(fieldUpdateCall[1]?.method).toBe('PUT');
+
+      // Assert - Complete payload with all required fields (slug, label, field_type, params)
+      const requestBody = JSON.parse(fieldUpdateCall[1]?.body as string);
+      expect(requestBody).toHaveProperty('slug', 'field_123');
+      expect(requestBody).toHaveProperty('label', 'Updated Field'); // Updated value
+      expect(requestBody).toHaveProperty('field_type', 'textfield'); // Preserved from current
+      expect(requestBody).toHaveProperty('params'); // Preserved from current
     });
 
     it('should include authentication headers in field operations', async () => {

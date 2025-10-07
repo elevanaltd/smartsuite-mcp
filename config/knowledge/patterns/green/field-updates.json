@@ -1,0 +1,154 @@
+{
+  "pattern_id": "GREEN_002",
+  "schema_version": "2.0.0",
+  "pattern": "FIELD_UPDATES_WORKING",
+  "name": "Field Update Operations with UUID Preservation",
+  "safetyLevel": "GREEN",
+  "severity": "SAFE",
+  "category": "validated_operation",
+
+  "status": "production_validated",
+  "last_verified": "2025-10-06",
+
+  "endpoints": {
+    "change_field": {
+      "method": "PUT",
+      "path": "/api/v1/applications/{appId}/change_field/",
+      "status": "fully_functional",
+      "performance": "400-700ms",
+      "evidence": "FIELD-OPERATIONS-TRUTH.md:103-148, API-LIMITATIONS-TRUTH.md:11-34"
+    }
+  },
+
+  "failureModes": [],
+
+  "validationRules": [
+    {
+      "rule_type": "uuid_preservation_check",
+      "condition": "updating status/select field with choices parameter",
+      "requirements": [
+        "MUST use 'choices' parameter (NOT 'options')",
+        "MUST include ALL existing choices in update",
+        "MUST preserve existing choice UUIDs (value field)",
+        "CAN modify labels and colors safely"
+      ],
+      "action": "VALIDATE",
+      "message": "Field updates require complete choices array with UUID preservation. Fetch current schema first, preserve ALL existing choice UUIDs."
+    },
+    {
+      "rule_type": "required_parameters_check",
+      "condition": "field update operation",
+      "requirements": [
+        "slug: Field identifier (required)",
+        "label: Display name (required)",
+        "field_type: Type identifier (required)",
+        "params: Field configuration (required, even if empty object)"
+      ],
+      "action": "VALIDATE",
+      "message": "Field updates require all parameters: slug, label, field_type, params"
+    }
+  ],
+
+  "correction": {
+    "description": "Production-validated patterns for safe field updates with UUID preservation",
+    "uuid_preservation_protocol": {
+      "workflow": [
+        "1. GET /applications/{appId}/ to retrieve current field schema",
+        "2. Extract complete choices[] array from field structure",
+        "3. Preserve ALL existing choice objects (value, label, color)",
+        "4. Add new choices or modify labels/colors as needed",
+        "5. Send complete choices array in update payload using 'choices' parameter"
+      ],
+      "critical_requirement": "MUST preserve ALL existing choices to prevent data loss"
+    },
+    "working_examples": {
+      "simple_label_update": {
+        "method": "PUT",
+        "endpoint": "/api/v1/applications/{appId}/change_field/",
+        "payload": {
+          "slug": "corrected01",
+          "label": "TEST_RENAMED_VIA_API_DEMO",
+          "field_type": "textfield",
+          "params": {}
+        },
+        "evidence": "Verified 2025-09-30"
+      },
+      "status_field_with_uuid_preservation": {
+        "method": "PUT",
+        "endpoint": "/api/v1/applications/{appId}/change_field/",
+        "payload": {
+          "slug": "task12code",
+          "label": "Task Code",
+          "field_type": "statusfield",
+          "params": {
+            "choices": [
+              {
+                "value": "existing_uuid_keep",
+                "label": "Active Status",
+                "color": "#00FF00"
+              },
+              {
+                "value": "new_uuid_added",
+                "label": "New Option",
+                "color": "#0000FF"
+              }
+            ]
+          }
+        },
+        "evidence": "Verified 2025-10-06 - Added 14 new options, zero data loss, all 12 records preserved"
+      }
+    },
+    "production_evidence_2025_10_06": {
+      "operation": "Large-scale status field update",
+      "field": "task12code",
+      "updates_performed": 3,
+      "new_options_added": 14,
+      "data_loss": 0,
+      "uuid_preservation": "100%",
+      "affected_records": 12,
+      "result": "All production records retained values successfully"
+    },
+    "response_pattern": {
+      "success": "200 OK with empty body",
+      "note": "Empty body indicates successful field update",
+      "verification": "Confirm changes in subsequent schema GET request"
+    },
+    "scope_and_limitations": {
+      "can_update": [
+        "Field labels (display names)",
+        "Field descriptions",
+        "Field properties and params",
+        "Choice labels and colors (with UUID preservation)",
+        "Help text and field configuration"
+      ],
+      "should_not_update": [
+        "Field slugs (permanent identifiers)",
+        "Field type (requires recreation)"
+      ],
+      "note": "Slugs are permanent identifiers. Labels can change freely."
+    }
+  },
+
+  "evidence": {
+    "source": "FIELD-OPERATIONS-TRUTH.md:103-148, API-LIMITATIONS-TRUTH.md:11-34",
+    "validation_dates": ["2025-09-30", "2025-10-06"],
+    "production_validated": true,
+    "success_rate": "100% with UUID preservation protocol",
+    "verified_operations": [
+      "Label updates",
+      "Status field choice additions",
+      "Complex field configuration updates"
+    ],
+    "zero_data_loss": true
+  },
+
+  "metadata": {
+    "last_verified": "2025-10-06",
+    "production_status": "stable",
+    "successful_updates": "3 complex updates, 14 options added",
+    "data_integrity": "100% preserved",
+    "performance_rating": "excellent",
+    "reliability_rating": "high",
+    "historical_note": "Pre-2025-09 documentation suggested issues, now resolved"
+  }
+}

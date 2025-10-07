@@ -1,0 +1,23 @@
+{
+  "pattern_id": "YELLOW_001",
+  "schema_version": "2.0.0",
+  "pattern": "BULK_OPERATION_LIMIT",
+  "name": "Bulk Operation Limit",
+  "safetyLevel": "YELLOW",
+  "severity": "WARNING",
+  "category": "performance",
+
+  "failureModes": [
+    {
+      "description": "Bulk operations with >100 records may timeout or perform poorly",
+      "prevention": "Split large operations into batches of 100 or less",
+      "impact": "Slow performance, potential timeouts"
+    }
+  ],
+
+  "validationRules": [
+    {
+      "limit": 100
+    }
+  ]
+}

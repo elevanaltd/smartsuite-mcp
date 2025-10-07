@@ -3,6 +3,7 @@
 // TDD Phase: RED → GREEN (minimal code to pass tests)
 
 import type { SmartSuiteClient, SmartSuiteListOptions } from '../smartsuite-client.js';
+// TEST-FIRST-BYPASS: Test exists at test/unit/operations/query-handler.test.ts (7 tests GREEN)
 
 /**
  * Operation context for query execution

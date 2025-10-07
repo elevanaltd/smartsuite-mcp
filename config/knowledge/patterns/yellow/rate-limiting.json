@@ -1,0 +1,116 @@
+{
+  "pattern_id": "YELLOW_003",
+  "schema_version": "2.0.0",
+  "pattern": "RATE_LIMITING",
+  "name": "API Rate Limiting and Throttling",
+  "safetyLevel": "YELLOW",
+  "severity": "WARNING",
+  "category": "performance_limits",
+
+  "triggers": [
+    {
+      "condition": "rapid_sequential_requests",
+      "threshold": {
+        "requests_per_second": 4,
+        "description": "More than 4 requests per second triggers 429 response"
+      }
+    },
+    {
+      "condition": "batch_operations_without_delays",
+      "check": "sequential_requests_without_minimum_250ms_delay"
+    }
+  ],
+
+  "failureModes": [
+    {
+      "description": "429 Too Many Requests error when exceeding 4 requests per second",
+      "prevention": "Enforce minimum 250ms delays between requests. Use 30-second backoff after 429 errors (NOT standard exponential backoff).",
+      "impact": "API rejects requests with 429 status. Requires 30-second wait before retry. Operations stall, workflow delays, potential data loss if retries not implemented."
+    }
+  ],
+
+  "validationRules": [
+    {
+      "rule_type": "request_rate_check",
+      "condition": "requests_per_second > 4",
+      "action": "WARN",
+      "message": "WARNING: Rate limit threshold approaching. SmartSuite API limits to 4 requests/second. Current rate: {rate}/sec. Add 250ms delays between requests."
+    },
+    {
+      "rule_type": "backoff_strategy_check",
+      "condition": "retry_strategy !== '30_second_backoff'",
+      "action": "WARN",
+      "message": "WARNING: SmartSuite requires 30-second backoff after 429 errors (NOT standard exponential backoff). Update retry logic accordingly."
+    }
+  ],
+
+  "correction": {
+    "description": "Implement rate limiting compliance with proper delays and backoff strategy",
+    "rate_limit_details": {
+      "maximum_rate": "4 requests per second",
+      "recommended_delay": "250ms minimum between requests",
+      "burst_tolerance": "minimal - strict enforcement",
+      "backoff_requirement": "30 seconds (non-standard)"
+    },
+    "implementation_patterns": {
+      "sequential_operations": {
+        "pattern": "await delay(250) between each API call",
+        "example": "for batch of 20 records: 20 calls × 250ms = 5 seconds minimum"
+      },
+      "bulk_batching": {
+        "pattern": "Use bulk endpoints to reduce API call count",
+        "example": "20 individual updates (5s) → 1 bulk update (400-700ms)"
+      },
+      "parallel_operations": {
+        "pattern": "Limit concurrent requests to 3 maximum with 250ms stagger",
+        "note": "Parallel requests still count toward rate limit"
+      }
+    },
+    "backoff_strategy": {
+      "on_429_error": {
+        "immediate_action": "Stop all requests to this endpoint",
+        "wait_duration": "30 seconds (exactly)",
+        "retry_behavior": "Resume with normal rate limiting",
+        "note": "SmartSuite does NOT use exponential backoff - use fixed 30-second delay"
+      },
+      "error_handling": {
+        "detect_429": "response.status === 429",
+        "log_warning": "Rate limit exceeded, waiting 30 seconds",
+        "queue_pending": "Queue remaining operations for after backoff",
+        "retry_once": "After 30s, retry with 250ms delays"
+      }
+    },
+    "workflow": [
+      "1. Calculate total API calls needed for operation",
+      "2. Add 250ms delays between sequential calls",
+      "3. Use bulk endpoints where possible to minimize calls",
+      "4. Monitor for 429 responses",
+      "5. On 429: wait exactly 30 seconds before retry",
+      "6. Resume with continued 250ms delays"
+    ],
+    "optimization_strategies": [
+      "Prefer bulk operations (1 call vs 20+ calls)",
+      "Batch related operations together",
+      "Use schema operations (unlimited) to prepare before record operations",
+      "Cache schema data to avoid repeated retrieval calls",
+      "Queue operations during high-volume workflows"
+    ]
+  },
+
+  "evidence": {
+    "source": "API-LIMITATIONS-TRUTH.md:132-138",
+    "validation_date": "2025-10-06",
+    "production_confirmed": true,
+    "trigger_pattern": "> 4 requests per second",
+    "backoff_requirement": "30 seconds (non-standard)"
+  },
+
+  "metadata": {
+    "last_verified": "2025-10-06",
+    "affects_all_endpoints": true,
+    "workaround_available": true,
+    "performance_impact": "moderate",
+    "requires_custom_backoff": true,
+    "standard_exponential_backoff_ineffective": true
+  }
+}

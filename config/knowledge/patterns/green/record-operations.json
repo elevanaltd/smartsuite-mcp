@@ -1,0 +1,177 @@
+{
+  "pattern_id": "GREEN_003",
+  "schema_version": "2.0.0",
+  "pattern": "RECORD_OPERATIONS_WORKING",
+  "name": "Record CRUD Operations - Fully Functional",
+  "safetyLevel": "GREEN",
+  "severity": "SAFE",
+  "category": "validated_operation",
+
+  "status": "production_validated",
+  "last_verified": "2025-10-06",
+
+  "endpoints": {
+    "list_records": {
+      "method": "POST",
+      "path": "/api/v1/applications/{appId}/records/list/",
+      "status": "fully_functional",
+      "performance": "400-600ms",
+      "evidence": "API-CAPABILITIES-TRUTH.md:13-35, extensive production usage"
+    },
+    "get_single_record": {
+      "method": "GET",
+      "path": "/api/v1/applications/{appId}/records/{recordId}/",
+      "status": "fully_functional",
+      "performance": "300-500ms",
+      "evidence": "API-CAPABILITIES-TRUTH.md:37-42"
+    },
+    "create_record": {
+      "method": "POST",
+      "path": "/api/v1/applications/{appId}/records/",
+      "status": "fully_functional",
+      "performance": "400-700ms",
+      "evidence": "API-CAPABILITIES-TRUTH.md:44-49, production usage across 41 applications"
+    },
+    "update_record": {
+      "method": "PATCH",
+      "path": "/api/v1/applications/{appId}/records/{recordId}/",
+      "status": "fully_functional",
+      "performance": "400-700ms",
+      "evidence": "API-CAPABILITIES-TRUTH.md:51-56, bulk update patterns validated"
+    },
+    "delete_record": {
+      "method": "DELETE",
+      "path": "/api/v1/applications/{appId}/records/{recordId}/",
+      "status": "functional with trailing slash requirement",
+      "performance": "300-500ms",
+      "evidence": "API-CAPABILITIES-TRUTH.md:58-63",
+      "critical_note": "Requires trailing slash - see YELLOW_005 pattern"
+    }
+  },
+
+  "failureModes": [],
+
+  "validationRules": [
+    {
+      "rule_type": "format_compliance_check",
+      "condition": "record operations with complex field types",
+      "requirements": [
+        "Linked records: MUST use array format",
+        "Rich text: MUST use SmartDoc structure",
+        "Status fields: MUST use option codes not labels",
+        "Select fields: MUST use choice codes not display labels"
+      ],
+      "action": "VALIDATE",
+      "message": "Record operations require proper field format compliance. See RED patterns for critical format requirements."
+    },
+    {
+      "rule_type": "endpoint_format_check",
+      "condition": "DELETE or PATCH operations",
+      "requirements": [
+        "Endpoint MUST end with trailing slash",
+        "Record ID MUST be valid 24-character hex"
+      ],
+      "action": "VALIDATE",
+      "message": "Record ID operations require trailing slash on endpoint URL"
+    }
+  ],
+
+  "correction": {
+    "description": "Production-validated patterns for successful record operations",
+    "list_records": {
+      "method": "POST",
+      "endpoint": "/api/v1/applications/{appId}/records/list/",
+      "payload": {
+        "limit": 100,
+        "offset": 0,
+        "filter": {
+          "operator": "and",
+          "fields": [
+            {
+              "field": "status",
+              "comparison": "is",
+              "value": "active"
+            }
+          ]
+        }
+      },
+      "features": [
+        "Comprehensive filtering support",
+        "Pagination with limit/offset",
+        "Sorting capabilities",
+        "Field selection (hydrated parameter)"
+      ],
+      "evidence": "2,000+ records managed in production EAV system"
+    },
+    "get_single_record": {
+      "method": "GET",
+      "endpoint": "/api/v1/applications/{appId}/records/{recordId}/",
+      "note": "Simple retrieval by record ID",
+      "trailing_slash": "Required"
+    },
+    "create_record": {
+      "method": "POST",
+      "endpoint": "/api/v1/applications/{appId}/records/",
+      "payload": {
+        "field_slug_1": "value",
+        "linked_field": ["record_id_array"],
+        "status_field": "option_code",
+        "rich_text_field": {
+          "data": {"type": "doc", "content": []},
+          "html": "<p>Content</p>",
+          "preview": "Content"
+        }
+      },
+      "note": "Supports all field types with proper formatting",
+      "evidence": "Production usage across 41 applications"
+    },
+    "update_record": {
+      "method": "PATCH",
+      "endpoint": "/api/v1/applications/{appId}/records/{recordId}/",
+      "payload": {
+        "field_to_update": "new_value"
+      },
+      "note": "Partial updates supported - only include fields to change",
+      "trailing_slash": "Required",
+      "evidence": "Bulk update patterns validated in production"
+    },
+    "delete_record": {
+      "method": "DELETE",
+      "endpoint": "/api/v1/applications/{appId}/records/{recordId}/",
+      "critical_requirement": "MUST include trailing slash",
+      "failure_without_slash": "Silent failure or 301 redirect",
+      "reference_pattern": "YELLOW_005 (Trailing Slash Issues)"
+    },
+    "field_format_requirements": {
+      "linked_records": "Array format required - see RED_002",
+      "rich_text": "SmartDoc structure required - see RED_003",
+      "status_fields": "Option codes required - see RED_005",
+      "select_fields": "Choice codes not labels",
+      "reference": "All RED patterns for critical format requirements"
+    },
+    "production_evidence": {
+      "records_managed": "2,000+",
+      "applications_used": 41,
+      "operations_validated": ["list", "get", "create", "update", "delete"],
+      "success_rate": "100% with proper formatting"
+    }
+  },
+
+  "evidence": {
+    "source": "API-CAPABILITIES-TRUTH.md:13-63",
+    "validation_date": "2025-10-06",
+    "production_validated": true,
+    "extensive_usage": "EAV production system with 2,000+ records",
+    "applications_tested": 41,
+    "all_operations_functional": true
+  },
+
+  "metadata": {
+    "last_verified": "2025-10-06",
+    "production_status": "stable",
+    "performance_rating": "excellent",
+    "reliability_rating": "high",
+    "comprehensive_filtering": true,
+    "all_field_types_supported": true
+  }
+}

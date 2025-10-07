@@ -19,8 +19,42 @@ PHOENIX_REBUILD_CONTEXT::[
     smartsuite_record[create+update+delete_operations],
     smartsuite_schema[table_structure_retrieval],
     smartsuite_discover[field_mapping_discovery],
-    smartsuite_undo[transaction_rollback],
-    smartsuite_knowledge[SmartDoc_formats+common_patterns]→OPTIONAL[knowledge_wrapper]
+    smartsuite_intelligent[AI_guided_operations+safety_analysis],
+    smartsuite_field_create[field_creation],
+    smartsuite_field_update[field_modification]
+  ]
+  NOTE::"undo removed - SmartSuite API has no undo/rollback capability. Dry-run mode is the safety mechanism."
+
+  KNOWLEDGE_BASE_ARCHITECTURE::[
+    LOCATION::"config/knowledge/"
+    STRUCTURE::[
+      manifest.json[version_2.0.0+pattern_index],
+      patterns/red/[6_BLOCKING_patterns],
+      patterns/yellow/[6_WARNING_patterns],
+      patterns/green/[5_SAFE_patterns],
+      rules/[format+endpoint+operator_validation]
+    ]
+    PATTERN_CATEGORIES::[
+      RED::BLOCKING[UUID_corruption,linked_record_format,SmartDoc_format,filter_operators,status_values,incomplete_choices],
+      YELLOW::WARNING[bulk_limits,token_explosion,rate_limiting,field_positioning,trailing_slash,wrong_methods],
+      GREEN::SAFE[field_creation,field_updates,record_CRUD,filtering,bulk_operations]
+    ]
+    VALIDATION_RULES::[
+      format_validation[12_field_types],
+      endpoint_validation[15+_endpoints],
+      operator_validation[16_field_types]
+    ]
+    LOADING::[
+      TRIGGER::MCP_server_startup,
+      PERFORMANCE::<100ms_load_time,
+      UPDATE_MECHANISM::restart_to_reload[edit_JSON→restart_server],
+      AUTO_LOADING::self_updating[no_code_changes_needed]
+    ]
+    USAGE::[
+      smartsuite_intelligent_tool→pattern_matching,
+      safety_analysis→RED/YELLOW/GREEN_classification,
+      suggested_corrections→guided_by_patterns
+    ]
   ]
 
   PHASES::[
@@ -32,10 +66,13 @@ PHOENIX_REBUILD_CONTEXT::[
     Phase_2D::Operation_Handlers[COMPLETE→44_handler_tests_GREEN→commit_ca7d485],
     Phase_2E::MCP_Tool_Layer[COMPLETE→46_tool_tests_GREEN→commit_f75ba76],
     Phase_2F::MCP_Server_Integration[COMPLETE→344_352_tests_GREEN→commit_c606295→PRODUCTION_READY],
-    Phase_2G_REVISED::Enhanced_Direct_Tools[remove_filter+implement_knowledge_tool],
-    Phase_4::User_Validation[PENDING→real_API_testing]
+    Phase_2G_REVISED::Enhanced_Direct_Tools[COMPLETE→6_tools_exposed+knowledge_wrapper],
+    Phase_2J::Field_Management[COMPLETE→407_407_tests_GREEN→commit_ac7bfd2],
+    Phase_2K::Knowledge_Base_Migration[COMPLETE→17_patterns+3_rule_sets→JSON_based],
+    Phase_2L::Field_Operations_Fix[COMPLETE→double_nesting_resolved→commit_d5ec539→PRODUCTION_VALIDATED],
+    Phase_4::User_Validation[COMPLETE→all_7_tools_operational]
   ]
-  CURRENT_PHASE::Phase_2G_REVISED[expose_all_tools+knowledge_wrapper]
+  CURRENT_PHASE::Phase_4[PRODUCTION_READY→all_operations_validated]
 
   DESIGN_PRINCIPLES::[
     behavioral_tests_as_truth_source,
@@ -100,17 +137,22 @@ IMPLEMENTATION_STATUS::[
     Phase_2C::FieldTranslator[35_35_tests_GREEN→git_280c23f],
     Phase_2D::Operation_Handlers[44_handler_tests_GREEN→git_ca7d485],
     Phase_2E::MCP_Tool_Layer[46_tool_tests_GREEN→git_f75ba76],
-    Phase_2F::MCP_Server_Integration[344_352_tests_GREEN→git_c606295→PRODUCTION_VERIFIED_IN_WARP]
+    Phase_2F::MCP_Server_Integration[344_352_tests_GREEN→git_c606295→PRODUCTION_VERIFIED_IN_WARP],
+    Phase_2G::Enhanced_Direct_Tools[6_tools_exposed+knowledge_wrapper],
+    Phase_2J::Field_Management[407_tests_GREEN→git_ac7bfd2→field_create+field_update],
+    Phase_2K::Knowledge_Base_Migration[17_patterns+3_rule_sets→JSON_based→config/knowledge/],
+    Phase_2L::Field_Operations_Fix[double_nesting_resolved→git_d5ec539→PRODUCTION_VALIDATED],
+    Phase_4::User_Validation[all_7_tools_operational→field_operations_confirmed]
   ]
-  IN_PROGRESS::[
-    Phase_2G::Intelligent_Tool[smartsuite_intelligent_handler_implementation]
-  ]
-  READY::[
-    Phase_4::User_Validation[real_API_testing_pending_2G_completion]
+  PRODUCTION_STATUS::[
+    ALL_TOOLS::OPERATIONAL[7_7_tools_working],
+    QUALITY_GATES::GREEN[407_tests_passing+lint+typecheck],
+    FIELD_OPERATIONS::VALIDATED[create+update_confirmed_with_real_API],
+    KNOWLEDGE_BASE::PRODUCTION_READY[17_patterns_loaded_at_startup]
   ]
   BRANCH_STATUS::[
-    main→merged_through_Phase_2E,
-    phase-2f→1_commit_ahead[c606295_uncommitted→ready_for_commit]
+    feat/knowledge-base→5_commits_ahead[d5ec539_latest→ready_for_merge],
+    main→needs_update[merge_feat/knowledge-base]
   ]
 ]
 
@@ -156,7 +198,7 @@ CONTEXT_PHASES::[
   IMPACT_ANALYSIS::[
     DEPENDENCIES→import_graph_check
     TESTS→*.test.ts_coverage_search
-    TRANSACTIONS→undo_operation_impact
+    DRY_RUN_SAFETY→mutation_protection_verification
     FORMATS→SmartDoc/checklist_compatibility
   ]
 
@@ -204,7 +246,7 @@ WORKFLOW::[
     tests_for_new_features
     dry_run_true_first
     test_table_verification_before_production
-    transaction_history_undo_compatibility
+    mutation_safety_verification
   ]
 
   DOCUMENTATION::[
@@ -242,5 +284,41 @@ CI_VALIDATION_MANDATE::[
     ERROR_ARCHITECT::MUST[verify_all_three_in_fixes]
     CODE_REVIEW::MUST[confirm_CI_parity]
     ANY_AGENT::CANNOT[claim_complete_without_all_three]
+  ]
+]
+
+EMPIRICAL_VALIDATION_PROTOCOL::[
+  NEW_MANDATORY_PROCESS::[
+    LESSON_LEARNED::Pattern_852[multi_layer_payload_bug→3_4_false_completion_claims],
+    CONSTITUTIONAL_REQUIREMENT::REALITY_principle[L20→production_conditions_trump_assumptions],
+
+    BEFORE_CLAIMING_FIX_COMPLETE::[
+      1→READ_SmartSuite_Truth_documentation[exact_API_contract_with_line_numbers],
+      2→COMPARE_implementation_vs_documented_pattern[identify_gaps],
+      3→ADD_diagnostic_logging[transformation_points_visible],
+      4→RUN_quality_gates[lint+typecheck+test],
+      5→USER_validates_with_real_API[empirical_evidence_REQUIRED],
+      6→ONLY_THEN_claim_complete[no_validation_theater]
+    ]
+
+    VALIDATION_GATE::[
+      BLOCK::completion_claims_without_empirical_API_evidence,
+      REQUIRE::real_API_test_results_before_claiming_success,
+      ENFORCE::SmartSuite_Truth_consultation_before_implementation
+    ]
+
+    PATTERN_852_PREVENTION::[
+      SYMPTOM::API_400_errors_despite_unit_tests_passing,
+      ROOT_CAUSE::coordinated_transformation_across_handler→client_layers,
+      DETECTION::compare_actual_API_payload_vs_SmartSuite_Truth_contract,
+      PREVENTION::diagnostic_logging+empirical_validation_MANDATORY,
+      EVIDENCE::coordination/lessons-learned/852-PATTERN-MULTI-LAYER-PAYLOAD-BUG.md
+    ]
+  ]
+
+  ORCHESTRATOR_ACCOUNTABILITY::[
+    GAP_OWNERSHIP::orchestrator_owns_validation_gate_enforcement[L114],
+    BLOCKING_AUTHORITY::prevent_false_completion_claims[L152],
+    BUCK_STOPS_HERE::ultimate_accountability_for_validation_theater[L21]
   ]
 ]

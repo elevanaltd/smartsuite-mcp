@@ -1,0 +1,172 @@
+{
+  "version": "2.0.0",
+  "api_compatibility": "v1",
+  "last_updated": "2025-10-06",
+  "structure_version": "machine_optimized_v2",
+  "description": "SmartSuite API safety pattern knowledge base for IntelligentHandler MCP tool",
+
+  "pattern_index": {
+    "red": [
+      {
+        "id": "RED_001",
+        "pattern": "UUID_CORRUPTION",
+        "name": "UUID Corruption in Status Fields",
+        "file": "patterns/red/uuid-corruption.json",
+        "safetyLevel": "RED"
+      },
+      {
+        "id": "RED_002",
+        "pattern": "LINKED_RECORD_FORMAT_ERROR",
+        "name": "Linked Record Format Requirement",
+        "file": "patterns/red/linked-record-format.json",
+        "safetyLevel": "RED"
+      },
+      {
+        "id": "RED_003",
+        "pattern": "SMARTDOC_FORMAT_ERROR",
+        "name": "SmartDoc Rich Text Format Requirement",
+        "file": "patterns/red/smartdoc-format.json",
+        "safetyLevel": "RED"
+      },
+      {
+        "id": "RED_004",
+        "pattern": "WRONG_FILTER_OPERATORS",
+        "name": "Filter Operator Requirements by Field Type",
+        "file": "patterns/red/filter-operators.json",
+        "safetyLevel": "RED"
+      },
+      {
+        "id": "RED_005",
+        "pattern": "STATUS_FIELD_VALUE_ERROR",
+        "name": "Status Field Value Format Requirement",
+        "file": "patterns/red/status-field-values.json",
+        "safetyLevel": "RED"
+      },
+      {
+        "id": "RED_006",
+        "pattern": "INCOMPLETE_CHOICES_UPDATE",
+        "name": "Incomplete Choices Array in Field Update",
+        "file": "patterns/red/incomplete-choices-update.json",
+        "safetyLevel": "RED"
+      }
+    ],
+    "yellow": [
+      {
+        "id": "YELLOW_001",
+        "pattern": "BULK_OPERATION_LIMITS",
+        "name": "Bulk Operation Record Limits",
+        "file": "patterns/yellow/bulk-limits.json",
+        "safetyLevel": "YELLOW"
+      },
+      {
+        "id": "YELLOW_002",
+        "pattern": "MCP_TOKEN_EXPLOSION",
+        "name": "MCP Context Window Token Explosion",
+        "file": "patterns/yellow/mcp-token-explosion.json",
+        "safetyLevel": "YELLOW"
+      },
+      {
+        "id": "YELLOW_003",
+        "pattern": "RATE_LIMITING",
+        "name": "API Rate Limiting and Throttling",
+        "file": "patterns/yellow/rate-limiting.json",
+        "safetyLevel": "YELLOW"
+      },
+      {
+        "id": "YELLOW_004",
+        "pattern": "FIELD_POSITIONING_ERROR",
+        "name": "Field Positioning prev_sibling_slug Null Error",
+        "file": "patterns/yellow/field-positioning.json",
+        "safetyLevel": "YELLOW"
+      },
+      {
+        "id": "YELLOW_005",
+        "pattern": "TRAILING_SLASH_MISSING",
+        "name": "Missing Trailing Slash Silent Failures",
+        "file": "patterns/yellow/trailing-slash.json",
+        "safetyLevel": "YELLOW"
+      },
+      {
+        "id": "YELLOW_006",
+        "pattern": "WRONG_HTTP_METHOD",
+        "name": "Wrong HTTP Method Errors",
+        "file": "patterns/yellow/wrong-http-method.json",
+        "safetyLevel": "YELLOW"
+      }
+    ],
+    "green": [
+      {
+        "id": "GREEN_001",
+        "pattern": "FIELD_CREATION_WORKING",
+        "name": "Field Creation Operations - Fully Functional",
+        "file": "patterns/green/field-creation.json",
+        "safetyLevel": "GREEN"
+      },
+      {
+        "id": "GREEN_002",
+        "pattern": "FIELD_UPDATES_WORKING",
+        "name": "Field Update Operations with UUID Preservation",
+        "file": "patterns/green/field-updates.json",
+        "safetyLevel": "GREEN"
+      },
+      {
+        "id": "GREEN_003",
+        "pattern": "RECORD_OPERATIONS_WORKING",
+        "name": "Record CRUD Operations - Fully Functional",
+        "file": "patterns/green/record-operations.json",
+        "safetyLevel": "GREEN"
+      },
+      {
+        "id": "GREEN_004",
+        "pattern": "FILTERING_OPERATIONS_WORKING",
+        "name": "Filtering and Search Operations - Fully Functional",
+        "file": "patterns/green/filtering.json",
+        "safetyLevel": "GREEN"
+      },
+      {
+        "id": "GREEN_005",
+        "pattern": "BULK_OPERATIONS_WORKING",
+        "name": "Bulk Record Operations - Fully Functional",
+        "file": "patterns/green/bulk-operations.json",
+        "safetyLevel": "GREEN"
+      }
+    ]
+  },
+
+  "validation_rules": [
+    {
+      "name": "Format Validation",
+      "file": "rules/format-validation.json",
+      "description": "Field format validation rules for all field types"
+    },
+    {
+      "name": "Endpoint Validation",
+      "file": "rules/endpoint-validation.json",
+      "description": "Endpoint format and HTTP method validation rules"
+    },
+    {
+      "name": "Operator Validation",
+      "file": "rules/operator-validation.json",
+      "description": "Filter operator validation rules by field type"
+    }
+  ],
+
+  "loading": {
+    "strategy": "eager",
+    "target_time": "<100ms",
+    "mcp_server_startup": true
+  },
+
+  "pattern_matching": {
+    "severity_priority": ["red", "yellow", "green"],
+    "citation_format": "pattern_id + pattern_name",
+    "interface_compliance": "IntelligentHandler KnowledgePattern interface"
+  },
+
+  "interface_requirements": {
+    "required_fields": ["pattern", "safetyLevel", "failureModes"],
+    "optional_fields": ["validationRules", "correction"],
+    "safetyLevel_values": ["RED", "YELLOW", "GREEN"],
+    "pattern_naming": "UPPERCASE_WITH_UNDERSCORES"
+  }
+}

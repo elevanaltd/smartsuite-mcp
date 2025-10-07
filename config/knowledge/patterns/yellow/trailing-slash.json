@@ -1,0 +1,118 @@
+{
+  "pattern_id": "YELLOW_005",
+  "schema_version": "2.0.0",
+  "pattern": "TRAILING_SLASH_MISSING",
+  "name": "Missing Trailing Slash Silent Failures",
+  "safetyLevel": "YELLOW",
+  "severity": "WARNING",
+  "category": "endpoint_format",
+
+  "triggers": [
+    {
+      "condition": "endpoint_formatting_check",
+      "affected_operations": ["DELETE", "PATCH", "PUT"],
+      "endpoint_patterns": [
+        "/records/{recordId}",
+        "/records/list",
+        "/records/bulk",
+        "/records/bulk_delete"
+      ],
+      "check": "endpoint does not end with /"
+    }
+  ],
+
+  "failureModes": [
+    {
+      "description": "DELETE and PUT operations fail silently with 301 redirect when trailing slash is missing",
+      "prevention": "Always include trailing slash at end of endpoint URLs for all SmartSuite API operations",
+      "impact": "Silent failure - operation appears successful but doesn't execute. DELETE doesn't remove record. PATCH doesn't update. No error message returned. Debugging extremely difficult."
+    }
+  ],
+
+  "validationRules": [
+    {
+      "rule_type": "endpoint_format_check",
+      "condition": "endpoint.match(/\\/records\\/[a-f0-9]{24}$/) AND method IN ['DELETE', 'PATCH', 'PUT']",
+      "action": "WARN",
+      "message": "WARNING: Missing trailing slash on record operation endpoint. Add trailing slash: /records/{recordId}/ to prevent silent failure."
+    },
+    {
+      "rule_type": "endpoint_format_check",
+      "condition": "endpoint.match(/\\/(list|bulk|bulk_delete)$/) AND NOT endpoint.endsWith('/')",
+      "action": "WARN",
+      "message": "WARNING: Missing trailing slash on {operation} endpoint. Required format: /{operation}/ to prevent 301 redirect or silent failure."
+    }
+  ],
+
+  "correction": {
+    "description": "Ensure all SmartSuite API endpoints end with trailing slash",
+    "affected_endpoints": {
+      "record_operations": {
+        "wrong": "/applications/{appId}/records/{recordId}",
+        "correct": "/applications/{appId}/records/{recordId}/",
+        "methods": ["GET", "PATCH", "DELETE"],
+        "impact_if_wrong": "301 redirect or silent failure"
+      },
+      "list_operations": {
+        "wrong": "/applications/{appId}/records/list",
+        "correct": "/applications/{appId}/records/list/",
+        "methods": ["POST"],
+        "impact_if_wrong": "404 or 301 redirect"
+      },
+      "bulk_operations": {
+        "wrong": "/applications/{appId}/records/bulk",
+        "correct": "/applications/{appId}/records/bulk/",
+        "methods": ["POST", "PATCH"],
+        "impact_if_wrong": "404 or silent failure"
+      },
+      "bulk_delete": {
+        "wrong": "/applications/{appId}/records/bulk_delete",
+        "correct": "/applications/{appId}/records/bulk_delete/",
+        "methods": ["DELETE"],
+        "impact_if_wrong": "Silent failure - no records deleted"
+      }
+    },
+    "examples": {
+      "delete_record": {
+        "method": "DELETE",
+        "wrong_endpoint": "https://app.smartsuite.com/api/v1/applications/68abc123/records/507f1f77",
+        "correct_endpoint": "https://app.smartsuite.com/api/v1/applications/68abc123/records/507f1f77/",
+        "symptom_if_wrong": "Returns 301 or appears successful but record not deleted"
+      },
+      "update_record": {
+        "method": "PATCH",
+        "wrong_endpoint": "https://app.smartsuite.com/api/v1/applications/68abc123/records/507f1f77",
+        "correct_endpoint": "https://app.smartsuite.com/api/v1/applications/68abc123/records/507f1f77/",
+        "symptom_if_wrong": "Returns 200 OK but record not updated"
+      },
+      "list_records": {
+        "method": "POST",
+        "wrong_endpoint": "https://app.smartsuite.com/api/v1/applications/68abc123/records/list",
+        "correct_endpoint": "https://app.smartsuite.com/api/v1/applications/68abc123/records/list/",
+        "symptom_if_wrong": "404 Not Found or empty results"
+      }
+    },
+    "detection_strategy": {
+      "url_validation": "Always append trailing slash to endpoint before making request",
+      "pattern": "endpoint.endsWith('/') || endpoint + '/'",
+      "test": "Verify endpoint ends with / before API call"
+    }
+  },
+
+  "evidence": {
+    "source": "API-LIMITATIONS-TRUTH.md:87-101",
+    "validation_date": "2025-10-06",
+    "production_incidents": "multiple",
+    "symptom": "Operation appears successful but doesn't work",
+    "affected_methods": ["DELETE", "PUT", "PATCH"]
+  },
+
+  "metadata": {
+    "last_verified": "2025-10-06",
+    "silent_failure_risk": true,
+    "debugging_difficulty": "extremely_high",
+    "affects_all_record_endpoints": true,
+    "workaround": "Always append trailing slash",
+    "performance_impact": "none when corrected"
+  }
+}

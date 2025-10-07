@@ -107,7 +107,8 @@ export function resetHandlerDependencies(): void {
 
 /**
  * Get all MCP tool schemas for registration
- * CONTRACT: MCP-TOOLS-021 - Must register all core tools (query, record, schema, discover, undo, intelligent, field_create, field_update)
+ * CONTRACT: MCP-TOOLS-021 - Must register all core tools (query, record, schema, discover, intelligent, field_create, field_update)
+ * Note: undo removed - SmartSuite API has no undo/rollback capability
  */
 export function getToolSchemas(): ToolSchema[] {
   return [
@@ -218,22 +219,8 @@ export function getToolSchemas(): ToolSchema[] {
       },
     },
     {
-      name: 'smartsuite_undo',
-      description: 'Undo a previous SmartSuite operation using transaction history. Reverses create/update/delete operations by their transaction ID. Prevents accidental data loss.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          transaction_id: {
-            type: 'string',
-            description: 'Transaction ID from a previous operation',
-          },
-        },
-        required: ['transaction_id'],
-      },
-    },
-    {
       name: 'smartsuite_intelligent',
-      description: 'AI-guided access to any SmartSuite API with knowledge-driven safety. Supports learn, dry_run, and execute modes for guided operations.',
+      description: 'AI-guided safety analysis for SmartSuite operations. Analyzes API requests against knowledge base to detect dangerous patterns (UUID corruption, wrong HTTP methods, format issues). Returns RED/YELLOW/GREEN safety guidance with warnings, blockers, and suggested corrections. Use other tools (smartsuite_query, smartsuite_record) for actual API execution.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -254,7 +241,7 @@ export function getToolSchemas(): ToolSchema[] {
             type: 'string',
             enum: ['learn', 'dry_run', 'execute'],
             default: 'learn',
-            description: 'Operation mode: learn (analyze), dry_run (validate), execute (perform)',
+            description: 'Analysis depth: learn (basic analysis), dry_run (detailed validation), execute (comprehensive analysis with execution recommendations). Note: This tool performs ANALYSIS ONLY - use smartsuite_query/smartsuite_record for actual API execution.',
           },
           tableId: {
             type: 'string',
@@ -595,31 +582,8 @@ export async function executeDiscoverTool(params: Record<string, unknown>): Prom
 }
 
 // ============================================================================
-// TOOL 5: smartsuite_undo - Transaction rollback
+// TOOL 5: smartsuite_intelligent - AI-guided operation analysis
 // ============================================================================
-
-/**
- * Execute undo tool
- * CONTRACT: MCP-TOOLS-018, MCP-TOOLS-019, MCP-TOOLS-020
- *
- * NOTE: UndoHandler not yet implemented - this is a placeholder
- * Phase 2E focuses on tool layer, UndoHandler will be Phase 2F
- */
-export function executeUndoTool(params: Record<string, unknown>): Promise<never> {
-  // Parameter validation (CONTRACT: MCP-TOOLS-018)
-  validateRequiredParam(params, 'transaction_id', 'string');
-
-  const transactionId = params.transaction_id as string;
-
-  // Validate transaction_id not empty
-  if (transactionId.trim() === '') {
-    return Promise.reject(new Error('transaction_id cannot be empty'));
-  }
-
-  // UndoHandler implementation pending - return placeholder
-  // This allows tool layer tests to pass while handler is being developed
-  return Promise.reject(new Error('UndoHandler not implemented - transaction rollback coming in Phase 2F'));
-}
 
 /**
  * Execute intelligent tool operation

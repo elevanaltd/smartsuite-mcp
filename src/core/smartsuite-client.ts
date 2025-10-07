@@ -65,7 +65,7 @@ export interface SmartSuiteClient {
 /**
  * Default base URL for SmartSuite API
  */
-const DEFAULT_BASE_URL = 'https://app.smartsuite.com';
+const DEFAULT_BASE_URL = 'https://app.smartsuite.com/api/v1';
 
 /**
  * Default limit for list operations (MCP token safety)
@@ -81,9 +81,12 @@ export async function createAuthenticatedClient(
 ): Promise<SmartSuiteClient> {
   const { apiKey, workspaceId, baseUrl = DEFAULT_BASE_URL } = config;
 
-  // Validate credentials with GET /api/v1/applications
+  // Ensure baseUrl ends with /api/v1 for backward compatibility
+  const normalizedBaseUrl = baseUrl.endsWith('/api/v1') ? baseUrl : `${baseUrl}/api/v1`;
+
+  // Validate credentials with GET /applications
   try {
-    const response = await fetch(`${baseUrl}/api/v1/applications`, {
+    const response = await fetch(`${normalizedBaseUrl}/applications`, {
       method: 'GET',
       headers: {
         Authorization: `Token ${apiKey}`,
@@ -140,6 +143,9 @@ async function handleAuthError(response: Response): Promise<never> {
  * Used by MCP server for synchronous initialization
  */
 export function createClient(apiKey: string, workspaceId: string, baseUrl: string): SmartSuiteClient {
+  // Ensure baseUrl ends with /api/v1 for backward compatibility
+  const normalizedBaseUrl = baseUrl.endsWith('/api/v1') ? baseUrl : `${baseUrl}/api/v1`;
+
   // Create base request function
   const makeRequest = async (
     endpoint: string,
@@ -147,7 +153,7 @@ export function createClient(apiKey: string, workspaceId: string, baseUrl: strin
     data?: unknown,
   ): Promise<unknown> => {
     try {
-      const url = endpoint.startsWith('http') ? endpoint : `${baseUrl}${endpoint}`;
+      const url = endpoint.startsWith('http') ? endpoint : `${normalizedBaseUrl}${endpoint}`;
 
       const options: RequestInit = {
         method,
@@ -173,6 +179,16 @@ export function createClient(apiKey: string, workspaceId: string, baseUrl: strin
         return {};
       }
 
+      // Handle 200 with empty body (field creation returns this)
+      const contentLength = response.headers?.get('content-length');
+      const contentType = response.headers?.get('content-type');
+
+      // If content-length is 0 or no JSON content-type, return empty object
+      if (contentLength === '0' || (contentType && !contentType.includes('application/json'))) {
+        return {};
+      }
+
+      // Try to parse JSON
       return await response.json();
     } catch (error) {
       // Network errors
@@ -191,8 +207,8 @@ export function createClient(apiKey: string, workspaceId: string, baseUrl: strin
     let errorMessage = '';
 
     try {
-      const errorData = await response.json() as { error?: string };
-      errorMessage = errorData.error ?? response.statusText;
+      const errorData = await response.json() as { error?: string; message?: string; detail?: string };
+      errorMessage = errorData.error ?? errorData.message ?? errorData.detail ?? response.statusText;
     } catch {
       errorMessage = response.statusText;
     }
@@ -210,7 +226,7 @@ export function createClient(apiKey: string, workspaceId: string, baseUrl: strin
   return {
     apiKey,
     workspaceId,
-    apiUrl: baseUrl,
+    apiUrl: normalizedBaseUrl,
 
     async listRecords(appId: string, options?: SmartSuiteListOptions): Promise<SmartSuiteListResponse> {
       const requestData = {
@@ -221,7 +237,7 @@ export function createClient(apiKey: string, workspaceId: string, baseUrl: strin
       };
 
       const result = await makeRequest(
-        `/api/v1/applications/${appId}/records`,
+        `/applications/${appId}/records/list/`,
         'POST',
         requestData,
       );
@@ -230,11 +246,11 @@ export function createClient(apiKey: string, workspaceId: string, baseUrl: strin
     },
 
     async getRecord(appId: string, recordId: string): Promise<unknown> {
-      return makeRequest(`/api/v1/applications/${appId}/records/${recordId}/`, 'GET');
+      return makeRequest(`/applications/${appId}/records/${recordId}/`, 'GET');
     },
 
     async createRecord(appId: string, data: Record<string, unknown>): Promise<unknown> {
-      return makeRequest(`/api/v1/applications/${appId}/records/`, 'POST', data);
+      return makeRequest(`/applications/${appId}/records/`, 'POST', data);
     },
 
     async updateRecord(
@@ -242,29 +258,36 @@ export function createClient(apiKey: string, workspaceId: string, baseUrl: strin
       recordId: string,
       data: Record<string, unknown>,
     ): Promise<unknown> {
-      return makeRequest(`/api/v1/applications/${appId}/records/${recordId}/`, 'PATCH', data);
+      return makeRequest(`/applications/${appId}/records/${recordId}/`, 'PATCH', data);
     },
 
     async deleteRecord(appId: string, recordId: string): Promise<void> {
-      await makeRequest(`/api/v1/applications/${appId}/records/${recordId}/`, 'DELETE');
+      await makeRequest(`/applications/${appId}/records/${recordId}/`, 'DELETE');
     },
 
     async getSchema(appId: string): Promise<unknown> {
-      return makeRequest(`/api/v1/applications/${appId}/`, 'GET');
+      return makeRequest(`/applications/${appId}/`, 'GET');
     },
 
     async countRecords(appId: string, options?: SmartSuiteListOptions): Promise<number> {
+      // SMARTSUITE API CONTRACT: Count uses /records/list/ endpoint
+      // REALITY: API ignores count_only flag and returns full records
+      // WORKAROUND: Extract count from result.total field
+      // REFERENCE: Empirical validation 2025-10-07 (GAP-004)
       const requestData = {
+        count_only: true, // Flag sent but ignored by API
         ...(options?.filter && { filter: options.filter }),
       };
 
       const result = await makeRequest(
-        `/api/v1/applications/${appId}/records/count/`,
+        `/applications/${appId}/records/list/`,
         'POST',
         requestData,
       );
 
-      return (result as { count: number }).count;
+      // Extract count from result.total (not result.count which doesn't exist)
+      const countValue = (result as { total: number }).total;
+      return countValue;
     },
 
     async request(options: SmartSuiteRequestOptions): Promise<unknown> {
@@ -272,11 +295,87 @@ export function createClient(apiKey: string, workspaceId: string, baseUrl: strin
     },
 
     async addField(appId: string, fieldConfig: Record<string, unknown>): Promise<unknown> {
-      return makeRequest(`/api/v1/applications/${appId}/add_field/`, 'POST', fieldConfig);
+      /**
+       * LAYER RESPONSIBILITY: Nest flat config into SmartSuite API structure
+       * Reference: FIELD-OPERATIONS-TRUTH.md L28-44 for verified working pattern
+       *
+       * Input (flat from handler):
+       *   { slug: "test123", label: "Test", field_type: "textfield", params: {} }
+       *
+       * Output (nested for API):
+       *   {
+       *     field: { slug, label, field_type, params, is_new: true },
+       *     field_position: { prev_sibling_slug: "" },
+       *     auto_fill_structure_layout: true
+       *   }
+       */
+
+      // Build proper API payload from flat config
+      const apiPayload = {
+        field: {
+          slug: fieldConfig.slug as string,
+          label: fieldConfig.label as string,
+          field_type: fieldConfig.field_type as string,
+          params: fieldConfig.params ?? {},  // Required even if empty (FIELD-OPERATIONS-TRUTH.md L34)
+          is_new: true,  // Required for new fields (FIELD-OPERATIONS-TRUTH.md L37)
+        },
+        field_position: {
+          prev_sibling_slug: (fieldConfig.prev_sibling_slug as string) ?? '',  // Empty = beginning (L47)
+        },
+        auto_fill_structure_layout: true,  // Required (L42)
+      };
+
+      // Diagnostic logging - track API payload
+      // eslint-disable-next-line no-console
+      console.error('[SMARTSUITE-CLIENT] Sending to API:', JSON.stringify(apiPayload, null, 2));
+
+      return makeRequest(`/applications/${appId}/add_field/`, 'POST', apiPayload);
     },
 
     async updateField(appId: string, fieldId: string, updates: Record<string, unknown>): Promise<unknown> {
-      return makeRequest(`/api/v1/applications/${appId}/change_field/${fieldId}/`, 'POST', updates);
+      /**
+       * LAYER RESPONSIBILITY: Fetch current field, merge updates, send complete payload
+       * Reference: FIELD-OPERATIONS-TRUTH.md L123-127 for required parameters
+       *
+       * CRITICAL REQUIREMENT: SmartSuite API requires ALL fields in update payload:
+       *   - slug (field identifier)
+       *   - label (current or updated)
+       *   - field_type (current or updated)
+       *   - params (current or updated)
+       *
+       * Strategy: Fetch current field definition, merge updates, send complete object
+       */
+
+      // Fetch current field definition to get existing label, field_type, params
+      const schema = await makeRequest(`/applications/${appId}/`, 'GET') as { structure?: Array<{ slug: string; label: string; field_type: string; params?: Record<string, unknown> }> };
+
+      if (!schema.structure) {
+        throw new Error(`Failed to fetch schema for table ${appId}`);
+      }
+
+      const currentField = schema.structure.find((f: { slug: string }) => f.slug === fieldId);
+
+      if (!currentField) {
+        throw new Error(`Field ${fieldId} not found in table ${appId}`);
+      }
+
+      // Build complete API payload with all required fields
+      const apiPayload = {
+        slug: fieldId,
+        label: (updates.label as string) ?? currentField.label,
+        field_type: (updates.field_type as string) ?? currentField.field_type,
+        params: updates.params ?? currentField.params ?? {},
+      };
+
+      // Diagnostic logging - track API payload
+      // eslint-disable-next-line no-console
+      console.error('[SMARTSUITE-CLIENT] Current field:', JSON.stringify(currentField, null, 2));
+      // eslint-disable-next-line no-console
+      console.error('[SMARTSUITE-CLIENT] Updates provided:', JSON.stringify(updates, null, 2));
+      // eslint-disable-next-line no-console
+      console.error('[SMARTSUITE-CLIENT] Sending complete payload to API:', JSON.stringify(apiPayload, null, 2));
+
+      return makeRequest(`/applications/${appId}/change_field/`, 'PUT', apiPayload);
     },
   };
 }

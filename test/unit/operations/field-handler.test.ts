@@ -72,7 +72,9 @@ describe('FieldHandler', () => {
       expect(field.label).toBe('Test Field');
       expect(field.slug).toBe('test_field');
 
-      // Assert - API called correctly
+      // Assert - API called with FLAT config (client handles nesting)
+      // Constitutional citation (line 102): EMPIRICAL_DEVELOPMENT - verify Option A implementation
+      // Handler sends flat config, client nests into API structure
       expect(mockClient.addField).toHaveBeenCalledWith(tableId, fieldConfig);
     });
 

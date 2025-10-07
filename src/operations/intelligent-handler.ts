@@ -125,6 +125,11 @@ export class IntelligentHandler {
             blockerMessage = 'Rich text fields require SmartDoc structure';
           }
 
+          // Special handling for UUID corruption
+          if (match.pattern === 'UUID_CORRUPTION') {
+            blockerMessage = 'Using "options" parameter will destroy all existing UUIDs';
+          }
+
           if (match.safetyLevel === 'RED') {
             blockers.push(blockerMessage);
             warnings.push(warningMessage);
@@ -322,20 +327,25 @@ export class IntelligentHandler {
 
   /**
    * Correct UUID corruption issue (options vs choices)
+   * FIX: Check for params.options (actual API structure) per CRITICAL-FORMATS-TRUTH.md
    */
   private correctUuidCorruption(operation: Operation): SuggestedCorrection {
     const correctedPayload = { ...operation.payload };
 
-    if (correctedPayload.options && Array.isArray(correctedPayload.options)) {
-      // Convert options array to choices array with preserved UUIDs
-      const choices = (correctedPayload.options as string[]).map((label, index) => ({
-        value: `existing_uuid_${index + 1}`,
-        label,
-        color: '#000000',
-      }));
+    // Check for nested params.options structure (actual SmartSuite API format)
+    if (correctedPayload.params && typeof correctedPayload.params === 'object' && !Array.isArray(correctedPayload.params)) {
+      const params = correctedPayload.params as Record<string, unknown>;
+      if (params.options && Array.isArray(params.options)) {
+        // Convert options array to choices array with preserved UUIDs
+        const choices = (params.options as string[]).map((label, index) => ({
+          value: `existing_uuid_${index + 1}`,
+          label,
+          color: '#000000',
+        }));
 
-      delete correctedPayload.options;
-      correctedPayload.choices = choices;
+        delete params.options;
+        params.choices = choices;
+      }
     }
 
     return {

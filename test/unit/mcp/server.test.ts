@@ -16,7 +16,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
  * Server Responsibilities:
  * 1. Initialize MCP Server instance with proper configuration
  * 2. Load environment variables for API authentication
- * 3. Register exactly 6 tools (smartsuite_query, smartsuite_record, smartsuite_schema, smartsuite_discover, smartsuite_undo, smartsuite_intelligent)
+ * 3. Register exactly 7 tools (query, record, schema, discover, intelligent, field_create, field_update)
  * 4. Handle server lifecycle (start, shutdown, error recovery)
  * 5. Validate tool schemas match MCP protocol requirements
  *
@@ -185,18 +185,18 @@ describe('MCP Server', () => {
 
   describe('Tool Registration', () => {
     describe('SERVER-005: Tool count validation', () => {
-      it('should register exactly 6 tools', async () => {
-        // CONTRACT: Server exposes all 6 tools (query, record, schema, discover, undo, intelligent)
-        // Phase 2G Revised: Direct 6-tool architecture (architectural amendment 44373ac)
+      it('should register exactly 7 tools', async () => {
+        // CONTRACT: Server exposes all 7 tools (4 core + intelligent + 2 field tools)
+        // Phase 2J: undo removed - SmartSuite API has no undo/rollback capability
 
         const { getRegisteredTools } = await import('../../../src/mcp/server.js');
         const tools = getRegisteredTools();
 
-        expect(tools).toHaveLength(8); // Phase 2J: Added field_create and field_update tools
+        expect(tools).toHaveLength(7); // 4 core + intelligent + 2 field tools (undo removed)
       });
 
-      it('should register all 8 core tools', async () => {
-        // CONTRACT: All tools accessible without facade layer (Phase 2J: 6 + 2 field tools)
+      it('should register all 7 core tools', async () => {
+        // CONTRACT: All tools accessible without facade layer (Phase 2J: 4 core + intelligent + 2 field tools)
 
         const { getRegisteredTools } = await import('../../../src/mcp/server.js');
         const tools = getRegisteredTools();
@@ -206,7 +206,6 @@ describe('MCP Server', () => {
         expect(toolNames).toContain('smartsuite_record');
         expect(toolNames).toContain('smartsuite_schema');
         expect(toolNames).toContain('smartsuite_discover');
-        expect(toolNames).toContain('smartsuite_undo');
         expect(toolNames).toContain('smartsuite_intelligent');
         expect(toolNames).toContain('smartsuite_field_create');
         expect(toolNames).toContain('smartsuite_field_update');
@@ -242,16 +241,6 @@ describe('MCP Server', () => {
         const intelligentTool = tools.find((t) => t.name === 'smartsuite_intelligent');
         expect(intelligentTool?.inputSchema.required).toBeDefined();
         expect(intelligentTool?.inputSchema.required).toBeInstanceOf(Array);
-      });
-
-      it('should define required parameters for smartsuite_undo', async () => {
-        // CONTRACT: Undo tool must specify transaction ID as required
-
-        const { getRegisteredTools } = await import('../../../src/mcp/server.js');
-        const tools = getRegisteredTools();
-
-        const undoTool = tools.find((t) => t.name === 'smartsuite_undo');
-        expect(undoTool?.inputSchema.required).toContain('transaction_id');
       });
     });
 
@@ -306,19 +295,6 @@ describe('MCP Server', () => {
             operation: 'tables',
           }),
         ).rejects.toThrow(/authentication|client/i);
-      });
-
-      it('should route smartsuite_undo to handler', async () => {
-        // CONTRACT: Tool execution should delegate to proper handler
-
-        const { executeToolByName } = await import('../../../src/mcp/server.js');
-
-        // This will fail until handler is implemented
-        await expect(
-          executeToolByName('smartsuite_undo', {
-            transaction_id: 'test-transaction-id',
-          }),
-        ).rejects.toThrow(/not implemented/i);
       });
 
       it('should route smartsuite_intelligent to IntelligentHandler', async () => {

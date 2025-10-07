@@ -4,7 +4,8 @@
 // Critical-Engineer Analysis: 002-PHASE-2G-INTELLIGENT-TOOL-ANALYSIS.md
 
 import { readFileSync, existsSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
 /**
  * Safety level classification
@@ -43,7 +44,7 @@ export interface Correction {
 }
 
 /**
- * Knowledge pattern structure
+ * Knowledge pattern structure (Legacy interface for backward compatibility)
  */
 export interface KnowledgePattern {
   pattern: string;
@@ -54,16 +55,104 @@ export interface KnowledgePattern {
 }
 
 /**
- * Manifest structure from manifest.json
+ * Rich knowledge pattern structure (loaded from JSON files)
+ * Internal-only interface that matches the new JSON schema
+ */
+export interface RichKnowledgePattern {
+  pattern_id: string;
+  schema_version: string;
+  pattern: string;
+  name: string;
+  safetyLevel: SafetyLevel;
+  severity: string;
+  category: string;
+  triggers?: Array<{
+    condition: string;
+    endpoint_match?: string;
+    parameter_check?: unknown;
+  }>;
+  failureModes: FailureMode[];
+  validationRules?: Array<{
+    rule_type?: string;
+    condition?: string;
+    action?: string;
+    message?: string;
+    limit?: number;
+    format?: string;
+    required?: string[];
+  }>;
+  correction?: {
+    description?: string;
+    workflow?: string[];
+    example?: unknown;
+    requirements?: string[];
+    method?: string;
+    endpoint?: string;
+    format?: string;
+    parameter?: string;
+  };
+  evidence?: {
+    incident_date?: string;
+    production_validated?: boolean;
+    source?: string;
+  };
+  metadata?: {
+    last_verified?: string;
+    production_incidents?: number;
+    recovery_required?: boolean;
+  };
+}
+
+/**
+ * Manifest structure from manifest.json (NEW format - v2.0.0)
+ * Critical-Engineer: consulted for Architecture pattern selection
  */
 export interface Manifest {
   version: string;
   api_compatibility: string;
   last_updated: string;
-  checksum: string;
-  patterns: string[];
-  knowledge_files: string[];
+  structure_version: string;
   description: string;
+  pattern_index: {
+    red: Array<{
+      id: string;
+      pattern: string;
+      name: string;
+      file: string;
+      safetyLevel: string;
+    }>;
+    yellow: Array<{
+      id: string;
+      pattern: string;
+      name: string;
+      file: string;
+      safetyLevel: string;
+    }>;
+    green: Array<{
+      id: string;
+      pattern: string;
+      name: string;
+      file: string;
+      safetyLevel: string;
+    }>;
+  };
+  validation_rules: unknown[];
+  loading: {
+    strategy: string;
+    target_time: string;
+    mcp_server_startup: boolean;
+  };
+  pattern_matching: {
+    severity_priority: string[];
+    citation_format: string;
+    interface_compliance: string;
+  };
+  interface_requirements: {
+    required_fields: string[];
+    optional_fields: string[];
+    safetyLevel_values: string[];
+    pattern_naming: string;
+  };
 }
 
 /**
@@ -80,18 +169,22 @@ export interface Operation {
 /**
  * KnowledgeBase class
  * Loads SmartSuite API safety patterns and provides pattern matching
+ * Critical-Engineer: consulted for Architecture pattern selection
  */
 export class KnowledgeBase {
-  private patterns: KnowledgePattern[];
+  private patterns: KnowledgePattern[]; // Legacy interface (exposed)
+  private richPatterns: RichKnowledgePattern[]; // Rich JSON structure (internal)
   private manifest: Manifest;
 
   /**
    * Constructor with dependency injection
-   * @param patterns Pre-loaded patterns for testing
+   * @param patterns Pre-loaded patterns for testing (legacy interface)
    * @param manifest Optional manifest for testing
+   * @param richPatterns Optional rich patterns for testing (internal)
    */
-  constructor(patterns: KnowledgePattern[], manifest?: Manifest) {
+  constructor(patterns: KnowledgePattern[], manifest?: Manifest, richPatterns?: RichKnowledgePattern[]) {
     this.patterns = patterns;
+    this.richPatterns = richPatterns ?? [];
     this.manifest = manifest ?? this.createDefaultManifest();
   }
 
@@ -99,11 +192,20 @@ export class KnowledgeBase {
    * Static factory method to load knowledge base from files
    * @param basePath Optional base path for knowledge files (for testing)
    * @returns KnowledgeBase instance
+   * Critical-Engineer: consulted for Architecture pattern selection
    */
   static loadFromFiles(basePath?: string): KnowledgeBase {
-    // Default to coordination/smartsuite-truth directory
-    // Go up one level from staging to find coordination directory (works in both local and CI)
-    const knowledgePath = basePath ?? join(process.cwd(), '../coordination/smartsuite-truth');
+    // Get the directory of this module file
+    // For CommonJS: use __dirname (if available)
+    // For ESM: use import.meta.url with fileURLToPath
+    const currentDir = typeof __dirname !== 'undefined'
+      ? __dirname
+      : dirname(fileURLToPath(import.meta.url));
+
+    // Default to config/knowledge directory (relative to build directory)
+    // currentDir in build will be: build/src/operations
+    // So ../../../config/knowledge resolves to: staging/config/knowledge
+    const knowledgePath = basePath ?? join(currentDir, '../../../config/knowledge');
     const manifestPath = join(knowledgePath, 'manifest.json');
 
     // Validate manifest exists
@@ -116,114 +218,132 @@ export class KnowledgeBase {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- JSON.parse returns any; validated immediately below
     const manifest: Manifest = JSON.parse(manifestContent);
 
-    // Validate manifest structure
-    if (!manifest.version || !manifest.patterns || !manifest.last_updated) {
-      throw new Error('Invalid manifest structure: missing required fields');
+    // Validate new manifest structure
+    if (!manifest.version || !manifest.pattern_index || !manifest.last_updated) {
+      throw new Error('Invalid manifest structure: missing required fields (version, pattern_index, last_updated)');
     }
 
-    // Build patterns from manifest
-    const patterns = KnowledgeBase.buildPatternsFromManifest(manifest);
+    // Load rich patterns from JSON files
+    const richPatterns = KnowledgeBase.loadRichPatternsFromManifest(manifest, knowledgePath);
 
-    return new KnowledgeBase(patterns, manifest);
+    // Map rich patterns to legacy interface for backward compatibility
+    const legacyPatterns = richPatterns.map(KnowledgeBase.mapRichToLegacy);
+
+    return new KnowledgeBase(legacyPatterns, manifest, richPatterns);
   }
 
   /**
-   * Build hardcoded patterns based on manifest pattern list
-   * In production, this could load from files, but for simplicity we hardcode
+   * Load rich patterns from individual JSON files referenced in manifest
+   * @param manifest Loaded manifest with pattern_index
+   * @param basePath Base path for knowledge directory
+   * @returns Array of rich patterns
    */
-  private static buildPatternsFromManifest(manifest: Manifest): KnowledgePattern[] {
-    const patterns: KnowledgePattern[] = [];
+  private static loadRichPatternsFromManifest(manifest: Manifest, basePath: string): RichKnowledgePattern[] {
+    const richPatterns: RichKnowledgePattern[] = [];
 
-    if (manifest.patterns.includes('UUID_CORRUPTION')) {
-      patterns.push({
-        pattern: 'UUID_CORRUPTION',
-        safetyLevel: 'RED',
-        failureModes: [
-          {
-            description: 'Using "options" parameter will destroy all existing UUIDs',
-            prevention: 'Use "choices" parameter with preserved UUIDs instead of "options"',
-            impact: 'All existing record values become invalid, data relationships break',
-          },
-        ],
-        correction: {
-          parameter: 'choices',
-        },
-      });
+    // Load RED patterns
+    for (const entry of manifest.pattern_index.red) {
+      const patternPath = join(basePath, entry.file);
+      if (existsSync(patternPath)) {
+        const patternContent = readFileSync(patternPath, 'utf-8');
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- JSON.parse returns any; validated below
+        const pattern: RichKnowledgePattern = JSON.parse(patternContent);
+
+        // Basic validation
+        if (!pattern.pattern || !pattern.safetyLevel || !pattern.failureModes) {
+          // eslint-disable-next-line no-console -- Operational diagnostic: pattern validation during knowledge base loading
+          console.warn(`Skipping malformed pattern at ${patternPath}: missing required fields`);
+          continue;
+        }
+
+        richPatterns.push(pattern);
+      } else {
+        // eslint-disable-next-line no-console -- Operational diagnostic: pattern file discovery during knowledge base loading
+        console.warn(`Pattern file not found: ${patternPath}`);
+      }
     }
 
-    if (manifest.patterns.includes('BULK_OPERATION_LIMIT')) {
-      patterns.push({
-        pattern: 'BULK_OPERATION_LIMIT',
-        safetyLevel: 'YELLOW',
-        failureModes: [
-          {
-            description: 'Bulk operation exceeds recommended limit',
-            prevention: 'Split operations into batches of 100 or fewer records',
-            impact: 'API timeouts, poor performance, potential partial failures',
-          },
-        ],
-        validationRules: [
-          {
-            limit: 100,
-          },
-        ],
-      });
+    // Load YELLOW patterns
+    for (const entry of manifest.pattern_index.yellow) {
+      const patternPath = join(basePath, entry.file);
+      if (existsSync(patternPath)) {
+        const patternContent = readFileSync(patternPath, 'utf-8');
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        const pattern: RichKnowledgePattern = JSON.parse(patternContent);
+
+        if (!pattern.pattern || !pattern.safetyLevel || !pattern.failureModes) {
+          // eslint-disable-next-line no-console -- Operational diagnostic: pattern validation during knowledge base loading
+          console.warn(`Skipping malformed pattern at ${patternPath}: missing required fields`);
+          continue;
+        }
+
+        richPatterns.push(pattern);
+      }
     }
 
-    if (manifest.patterns.includes('WRONG_HTTP_METHOD')) {
-      patterns.push({
-        pattern: 'WRONG_HTTP_METHOD',
-        safetyLevel: 'RED',
-        failureModes: [
-          {
-            description: 'Wrong HTTP method for endpoint',
-            prevention: 'Use POST for /records/list/, DELETE with trailing slash for record deletion',
-            impact: 'API request fails with 405 error',
-          },
-        ],
-        correction: {
-          method: 'POST',
-          endpoint: '/records/list/',
-        },
-      });
+    // Load GREEN patterns
+    for (const entry of manifest.pattern_index.green) {
+      const patternPath = join(basePath, entry.file);
+      if (existsSync(patternPath)) {
+        const patternContent = readFileSync(patternPath, 'utf-8');
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        const pattern: RichKnowledgePattern = JSON.parse(patternContent);
+
+        if (!pattern.pattern || !pattern.safetyLevel || !pattern.failureModes) {
+          // eslint-disable-next-line no-console -- Operational diagnostic: pattern validation during knowledge base loading
+          console.warn(`Skipping malformed pattern at ${patternPath}: missing required fields`);
+          continue;
+        }
+
+        richPatterns.push(pattern);
+      }
     }
 
-    if (manifest.patterns.includes('SMARTDOC_FORMAT')) {
-      patterns.push({
-        pattern: 'SMARTDOC_FORMAT',
-        safetyLevel: 'RED',
-        failureModes: [
-          {
-            description: 'Invalid SmartDoc format - plain string causes silent failure',
-            prevention: 'Use full SmartDoc structure with data/html/preview components',
-            impact: 'API returns 200 but field value not saved (silent failure)',
-          },
-        ],
-        correction: {
-          format: 'smartdoc',
-        },
-      });
-    }
-
-    if (manifest.patterns.includes('FIELD_NAME_VS_ID')) {
-      patterns.push({
-        pattern: 'FIELD_NAME_VS_ID',
-        safetyLevel: 'YELLOW',
-        failureModes: [
-          {
-            description: 'Using display names instead of field IDs',
-            prevention: 'Use discover tool to get field mappings before operations',
-            impact: 'Field not found errors, data sent to wrong fields',
-          },
-        ],
-      });
-    }
-
-    return patterns;
+    return richPatterns;
   }
 
   /**
-   * Create default manifest for testing
+   * Map rich pattern to legacy interface (adapter for backward compatibility)
+   * @param richPattern Rich knowledge pattern from JSON
+   * @returns Legacy knowledge pattern
+   */
+  private static mapRichToLegacy(richPattern: RichKnowledgePattern): KnowledgePattern {
+    // Build result with proper exactOptionalPropertyTypes compliance
+    const result: KnowledgePattern = {
+      pattern: richPattern.pattern,
+      safetyLevel: richPattern.safetyLevel,
+      failureModes: richPattern.failureModes,
+    };
+
+    // Map validation rules (lossily - take first rule's properties if multiple exist)
+    if (richPattern.validationRules && richPattern.validationRules.length > 0) {
+      const mappedRules: ValidationRule[] = [];
+      for (const rule of richPattern.validationRules) {
+        const mappedRule: ValidationRule = {};
+        if (rule.limit !== undefined) mappedRule.limit = rule.limit;
+        if (rule.format !== undefined) mappedRule.format = rule.format;
+        if (rule.required !== undefined) mappedRule.required = rule.required;
+        mappedRules.push(mappedRule);
+      }
+      result.validationRules = mappedRules;
+    }
+
+    // Map correction (lossily - use basic fields, ignore workflow/requirements)
+    if (richPattern.correction) {
+      const mappedCorrection: Correction = {};
+      if (richPattern.correction.method !== undefined) mappedCorrection.method = richPattern.correction.method;
+      if (richPattern.correction.endpoint !== undefined) mappedCorrection.endpoint = richPattern.correction.endpoint;
+      if (richPattern.correction.format !== undefined) mappedCorrection.format = richPattern.correction.format;
+      if (richPattern.correction.parameter !== undefined) mappedCorrection.parameter = richPattern.correction.parameter;
+      result.correction = mappedCorrection;
+    }
+
+    return result;
+  }
+
+
+  /**
+   * Create default manifest for testing (new structure)
    */
   private createDefaultManifest(): Manifest {
     const lastUpdated = new Date().toISOString().split('T')[0];
@@ -231,13 +351,33 @@ export class KnowledgeBase {
       throw new Error('Failed to generate last_updated date');
     }
     return {
-      version: '1.0.0',
+      version: '2.0.0',
       api_compatibility: 'v1',
       last_updated: lastUpdated,
-      checksum: 'sha256-default',
-      patterns: [],
-      knowledge_files: [],
+      structure_version: 'machine_optimized_v2',
       description: 'Default manifest',
+      pattern_index: {
+        red: [],
+        yellow: [],
+        green: [],
+      },
+      validation_rules: [],
+      loading: {
+        strategy: 'eager',
+        target_time: '<100ms',
+        mcp_server_startup: true,
+      },
+      pattern_matching: {
+        severity_priority: ['red', 'yellow', 'green'],
+        citation_format: 'pattern_id + pattern_name',
+        interface_compliance: 'IntelligentHandler KnowledgePattern interface',
+      },
+      interface_requirements: {
+        required_fields: ['pattern', 'safetyLevel', 'failureModes'],
+        optional_fields: ['validationRules', 'correction'],
+        safetyLevel_values: ['RED', 'YELLOW', 'GREEN'],
+        pattern_naming: 'UPPERCASE_WITH_UNDERSCORES',
+      },
     };
   }
 
@@ -310,49 +450,18 @@ export class KnowledgeBase {
   }
 
   /**
-   * Match operation against known patterns
+   * Match operation against known patterns using trigger-based evaluation
    * Returns array of matching patterns with safety information
+   * MINIMAL_INTERVENTION: Generic trigger interpreter replaces hardcoded logic
    */
   match(operation: Operation): KnowledgePattern[] {
     const matches: KnowledgePattern[] = [];
 
-    // Check UUID corruption pattern
-    if (this.hasPattern('UUID_CORRUPTION')) {
-      if (this.matchesUuidCorruption(operation)) {
-        const pattern = this.getPattern('UUID_CORRUPTION');
-        if (pattern) matches.push(pattern);
-      }
-    }
-
-    // Check bulk operation limit pattern
-    if (this.hasPattern('BULK_OPERATION_LIMIT')) {
-      if (this.matchesBulkLimit(operation)) {
-        const pattern = this.getPattern('BULK_OPERATION_LIMIT');
-        if (pattern) matches.push(pattern);
-      }
-    }
-
-    // Check wrong HTTP method pattern
-    if (this.hasPattern('WRONG_HTTP_METHOD')) {
-      if (this.matchesWrongMethod(operation)) {
-        const pattern = this.getPattern('WRONG_HTTP_METHOD');
-        if (pattern) matches.push(pattern);
-      }
-    }
-
-    // Check SmartDoc format pattern
-    if (this.hasPattern('SMARTDOC_FORMAT')) {
-      if (this.matchesSmartDocFormat(operation)) {
-        const pattern = this.getPattern('SMARTDOC_FORMAT');
-        if (pattern) matches.push(pattern);
-      }
-    }
-
-    // Check field name vs ID pattern
-    if (this.hasPattern('FIELD_NAME_VS_ID')) {
-      if (this.matchesFieldNameVsId(operation)) {
-        const pattern = this.getPattern('FIELD_NAME_VS_ID');
-        if (pattern) matches.push(pattern);
+    // Iterate over rich patterns and evaluate triggers
+    for (const richPattern of this.richPatterns) {
+      if (this.matchesPattern(richPattern, operation)) {
+        // Map to legacy interface for backward compatibility
+        matches.push(KnowledgeBase.mapRichToLegacy(richPattern));
       }
     }
 
@@ -360,19 +469,131 @@ export class KnowledgeBase {
   }
 
   /**
-   * Check if operation matches UUID corruption pattern
+   * Check if operation matches a rich pattern using triggers
+   * MINIMAL_INTERVENTION: Start with UUID_CORRUPTION operators (endpoint_match, exists, not_exists)
    */
-  private matchesUuidCorruption(operation: Operation): boolean {
-    if (!operation.payload) return false;
+  private matchesPattern(richPattern: RichKnowledgePattern, operation: Operation): boolean {
+    // If no triggers defined, fall back to legacy matching (or skip)
+    if (!richPattern.triggers || richPattern.triggers.length === 0) {
+      // For patterns without triggers, use legacy hardcoded logic
+      return this.matchesLegacyPattern(richPattern.pattern, operation);
+    }
 
-    // Detect "options" parameter in select field operations
-    return (
-      operation.endpoint.includes('change_field') &&
-      operation.method === 'PUT' &&
-      'options' in operation.payload &&
-      (operation.payload.field_type === 'singleselectfield' ||
-       operation.payload.field_type === 'multipleselectfield')
-    );
+    // Evaluate all triggers (AND logic - all must match)
+    for (const trigger of richPattern.triggers) {
+      if (!this.evaluateTrigger(trigger, operation)) {
+        return false; // Any trigger failure = no match
+      }
+    }
+
+    return true; // All triggers matched
+  }
+
+  /**
+   * Evaluate a single trigger against operation
+   * Supports: endpoint_match, parameter_check (exists, not_exists, AND)
+   */
+  private evaluateTrigger(trigger: unknown, operation: Operation): boolean {
+    // Type guard for trigger structure
+    if (typeof trigger !== 'object' || trigger === null) {
+      return false;
+    }
+
+    const triggerObj = trigger as Record<string, unknown>;
+
+    // Check endpoint_match (string.includes)
+    if ('endpoint_match' in triggerObj && typeof triggerObj.endpoint_match === 'string') {
+      if (!operation.endpoint.includes(triggerObj.endpoint_match)) {
+        return false; // Endpoint doesn't match
+      }
+    }
+
+    // Check parameter_check (nested path evaluation)
+    if ('parameter_check' in triggerObj && typeof triggerObj.parameter_check === 'object' && triggerObj.parameter_check !== null) {
+      const paramCheck = triggerObj.parameter_check as Record<string, unknown>;
+
+      // Evaluate primary condition
+      if ('path' in paramCheck && 'operator' in paramCheck) {
+        const path = paramCheck.path as string;
+        const operator = paramCheck.operator as string;
+
+        const value = this.resolvePath(operation, path);
+        if (!this.checkCondition(value, operator)) {
+          return false; // Primary condition failed
+        }
+      }
+
+      // Evaluate AND condition (nested parameter_check)
+      if ('AND' in paramCheck && typeof paramCheck.AND === 'object' && paramCheck.AND !== null) {
+        const andCheck = paramCheck.AND as Record<string, unknown>;
+
+        if ('path' in andCheck && 'operator' in andCheck) {
+          const andPath = andCheck.path as string;
+          const andOperator = andCheck.operator as string;
+
+          const andValue = this.resolvePath(operation, andPath);
+          if (!this.checkCondition(andValue, andOperator)) {
+            return false; // AND condition failed
+          }
+        }
+      }
+    }
+
+    return true; // All trigger checks passed
+  }
+
+  /**
+   * Resolve nested path in object (e.g., "payload.params.options")
+   * MINIMAL_INTERVENTION: Simple dot-notation path resolution
+   */
+  private resolvePath(obj: Operation | Record<string, unknown>, path: string): unknown {
+    const parts = path.split('.');
+    let current: unknown = obj;
+
+    for (const part of parts) {
+      if (typeof current !== 'object' || current === null) {
+        return undefined;
+      }
+      current = (current as Record<string, unknown>)[part];
+    }
+
+    return current;
+  }
+
+  /**
+   * Check condition based on operator
+   * MINIMAL_INTERVENTION: Start with exists, not_exists
+   */
+  private checkCondition(value: unknown, operator: string): boolean {
+    switch (operator) {
+      case 'exists':
+        return value !== undefined && value !== null;
+      case 'not_exists':
+        return value === undefined || value === null;
+      default:
+        // eslint-disable-next-line no-console -- Operational diagnostic: operator validation during pattern matching
+        console.warn(`Unknown operator: ${operator}`);
+        return false;
+    }
+  }
+
+  /**
+   * Legacy pattern matching for patterns without triggers
+   * Preserves backward compatibility with hardcoded logic
+   */
+  private matchesLegacyPattern(patternName: string, operation: Operation): boolean {
+    switch (patternName) {
+      case 'BULK_OPERATION_LIMIT':
+        return this.matchesBulkLimit(operation);
+      case 'WRONG_HTTP_METHOD':
+        return this.matchesWrongMethod(operation);
+      case 'SMARTDOC_FORMAT':
+        return this.matchesSmartDocFormat(operation);
+      case 'FIELD_NAME_VS_ID':
+        return this.matchesFieldNameVsId(operation);
+      default:
+        return false;
+    }
   }
 
   /**

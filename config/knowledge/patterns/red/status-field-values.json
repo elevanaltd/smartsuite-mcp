@@ -1,0 +1,78 @@
+{
+  "pattern_id": "RED_005",
+  "schema_version": "2.0.0",
+  "pattern": "STATUS_FIELD_VALUE_ERROR",
+  "name": "Status Field Value Format Requirement",
+  "safetyLevel": "RED",
+  "severity": "BLOCKING",
+  "category": "validation_error",
+
+  "triggers": [
+    {
+      "condition": "record_operation",
+      "endpoint_match": "/records/",
+      "parameter_check": {
+        "path": "payload.statusfield",
+        "operator": "exists",
+        "value_format": "contains_spaces_or_capitals"
+      }
+    }
+  ],
+
+  "failureModes": [
+    {
+      "description": "Using display labels instead of option codes for status fields causes validation errors",
+      "prevention": "Use option codes from schema choices[].value, not display labels from choices[].label",
+      "impact": "API returns validation error: 'value not in choices'. Operation fails, no data saved."
+    }
+  ],
+
+  "validationRules": [
+    {
+      "rule_type": "property_check",
+      "condition": "statusfield value does not match schema choices[].value",
+      "action": "BLOCK",
+      "message": "BLOCKING: Use option code (e.g., 'in_progress') not display label (e.g., 'In Progress'). Get codes from schema choices[].value field."
+    }
+  ],
+
+  "correction": {
+    "description": "Retrieve option codes from schema and use those instead of display labels",
+    "workflow": [
+      "1. GET /applications/{appId}/ to retrieve schema",
+      "2. Find status field in structure array",
+      "3. Extract choices[].value (option codes)",
+      "4. Map display labels to option codes",
+      "5. Use option codes in record operations"
+    ],
+    "example": {
+      "schema_choices": [
+        {"value": "in_progress", "label": "In Progress", "color": "#FF5733"},
+        {"value": "completed", "label": "Completed", "color": "#00FF00"}
+      ],
+      "wrong": {
+        "status": "In Progress"
+      },
+      "correct": {
+        "status": "in_progress"
+      }
+    },
+    "requirements": [
+      "MUST use choices[].value from schema",
+      "NEVER use choices[].label",
+      "Option codes are typically lowercase_with_underscores",
+      "Applies to statusfield, singleselectfield, multipleselectfield"
+    ]
+  },
+
+  "evidence": {
+    "incident_date": "2025-01",
+    "production_validated": true,
+    "source": "CRITICAL-FORMATS-TRUTH.md:194-234"
+  },
+
+  "metadata": {
+    "last_verified": "2025-10-06",
+    "frequency": "very_common"
+  }
+}

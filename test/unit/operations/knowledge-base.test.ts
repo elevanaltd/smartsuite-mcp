@@ -24,7 +24,7 @@ describe('KnowledgeBase', () => {
       expect(kb.getVersion()).toMatch(/^\d+\.\d+\.\d+$/); // Semver format
       expect(kb.getManifest()).toBeDefined();
       expect(kb.getManifest()).toHaveProperty('version');
-      expect(kb.getManifest()).toHaveProperty('patterns');
+      expect(kb.getManifest()).toHaveProperty('pattern_index'); // v2.0.0 structure
       expect(kb.getManifest()).toHaveProperty('last_updated');
     });
 
@@ -47,7 +47,7 @@ describe('KnowledgeBase', () => {
     });
 
     it('should validate manifest structure on load', async () => {
-      // CONTRACT: Manifest must have required fields: version, patterns, last_updated
+      // CONTRACT: Manifest must have required fields: version, pattern_index, last_updated (v2.0.0)
 
       // Arrange
       const { KnowledgeBase } = await import('../../../src/operations/knowledge-base.js');
@@ -58,10 +58,11 @@ describe('KnowledgeBase', () => {
 
       // Assert
       expect(manifest).toHaveProperty('version');
-      expect(manifest).toHaveProperty('patterns');
+      expect(manifest).toHaveProperty('pattern_index'); // v2.0.0 structure
       expect(manifest).toHaveProperty('last_updated');
-      expect(Array.isArray(manifest.patterns)).toBe(true);
-      expect(manifest.patterns.length).toBeGreaterThan(0);
+      expect(manifest.pattern_index).toHaveProperty('red');
+      expect(manifest.pattern_index).toHaveProperty('yellow');
+      expect(manifest.pattern_index).toHaveProperty('green');
     });
 
     it('should fail gracefully with descriptive error if manifest missing', async () => {
@@ -94,8 +95,9 @@ describe('KnowledgeBase', () => {
         endpoint: '/applications/123/change_field/',
         method: 'PUT',
         payload: {
-          field_type: 'singleselectfield',
-          options: ['Option1', 'Option2'], // ⚠️ WRONG - destroys UUIDs
+          params: {
+            options: ['Option1', 'Option2'], // ⚠️ WRONG - destroys UUIDs
+          },
         },
       };
 
@@ -349,6 +351,138 @@ describe('KnowledgeBase', () => {
       // Assert
       expect(kb.getPatternCount()).toBe(1);
       expect(kb.hasPattern('TEST_PATTERN')).toBe(true);
+    });
+  });
+
+  describe('trigger-based pattern matching', () => {
+    let knowledgeBase: any;
+
+    beforeEach(async () => {
+      const { KnowledgeBase } = await import('../../../src/operations/knowledge-base.js');
+      knowledgeBase = KnowledgeBase.loadFromFiles('test/fixtures/knowledge');
+    });
+
+    it('should match UUID_CORRUPTION via trigger evaluation (endpoint_match)', () => {
+      // CONTRACT: Trigger-based matching replaces hardcoded logic
+      // TRIGGER: endpoint_match: "/change_field/"
+      // MINIMAL_INTERVENTION: Start with simplest trigger (endpoint_match)
+
+      // Arrange
+      const operation = {
+        endpoint: '/applications/123/change_field/',
+        method: 'PUT',
+        payload: {
+          params: {
+            options: ['Option1', 'Option2'], // Trigger: payload.params.options exists
+          },
+        },
+      };
+
+      // Act
+      const matches = knowledgeBase.match(operation);
+
+      // Assert
+      expect(matches.length).toBeGreaterThan(0);
+      expect(matches[0].pattern).toBe('UUID_CORRUPTION');
+      expect(matches[0].safetyLevel).toBe('RED');
+    });
+
+    it('should match UUID_CORRUPTION via trigger evaluation (parameter_check exists)', () => {
+      // CONTRACT: parameter_check.path with "exists" operator
+      // TRIGGER: payload.params.options exists AND payload.params.choices not_exists
+
+      // Arrange
+      const operation = {
+        endpoint: '/applications/123/change_field/',
+        method: 'PUT',
+        payload: {
+          params: {
+            options: ['Value1'], // exists
+            // choices is missing (not_exists)
+          },
+        },
+      };
+
+      // Act
+      const matches = knowledgeBase.match(operation);
+
+      // Assert
+      expect(matches.length).toBeGreaterThan(0);
+      expect(matches[0].pattern).toBe('UUID_CORRUPTION');
+    });
+
+    it('should NOT match UUID_CORRUPTION when choices exists (negated trigger)', () => {
+      // CONTRACT: AND condition with not_exists must fail when property exists
+      // TRIGGER: payload.params.choices not_exists (should fail if exists)
+
+      // Arrange
+      const operation = {
+        endpoint: '/applications/123/change_field/',
+        method: 'PUT',
+        payload: {
+          params: {
+            options: ['Value1'],
+            choices: [{ value: 'uuid1', label: 'Label1' }], // exists (should block match)
+          },
+        },
+      };
+
+      // Act
+      const matches = knowledgeBase.match(operation);
+
+      // Assert
+      // Should NOT match UUID_CORRUPTION because choices exists
+      const uuidMatch = matches.find((m: any) => m.pattern === 'UUID_CORRUPTION');
+      expect(uuidMatch).toBeUndefined();
+    });
+
+    it('should NOT match UUID_CORRUPTION when endpoint does not match', () => {
+      // CONTRACT: endpoint_match must succeed for trigger to fire
+
+      // Arrange
+      const operation = {
+        endpoint: '/applications/123/records/', // Different endpoint
+        method: 'POST',
+        payload: {
+          params: {
+            options: ['Value1'], // Would match parameter_check, but endpoint wrong
+          },
+        },
+      };
+
+      // Act
+      const matches = knowledgeBase.match(operation);
+
+      // Assert
+      const uuidMatch = matches.find((m: any) => m.pattern === 'UUID_CORRUPTION');
+      expect(uuidMatch).toBeUndefined();
+    });
+
+    it('should resolve nested paths in parameter_check', () => {
+      // CONTRACT: resolvePath helper must navigate "payload.params.options"
+      // MINIMAL_INTERVENTION: Test simplest path resolution
+
+      // Arrange
+      const operation = {
+        endpoint: '/applications/123/change_field/',
+        method: 'PUT',
+        payload: {
+          params: {
+            nested: {
+              deep: {
+                property: 'value',
+              },
+            },
+          },
+        },
+      };
+
+      // Act
+      const matches = knowledgeBase.match(operation);
+
+      // Assert - Should not match UUID_CORRUPTION (wrong path)
+      const uuidMatch = matches.find((m: any) => m.pattern === 'UUID_CORRUPTION');
+      expect(uuidMatch).toBeUndefined();
     });
   });
 });

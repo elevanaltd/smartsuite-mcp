@@ -1,0 +1,17 @@
+{
+  "pattern_id": "YELLOW_002",
+  "schema_version": "2.0.0",
+  "pattern": "FIELD_NAME_VS_ID",
+  "name": "Field Name vs ID Confusion",
+  "safetyLevel": "YELLOW",
+  "severity": "WARNING",
+  "category": "api_usage",
+
+  "failureModes": [
+    {
+      "description": "Using display names instead of field IDs causes field not found errors",
+      "prevention": "Use smartsuite_discover to get field IDs first",
+      "impact": "Field not found errors from API"
+    }
+  ]
+}

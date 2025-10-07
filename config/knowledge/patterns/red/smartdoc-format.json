@@ -1,0 +1,90 @@
+{
+  "pattern_id": "RED_003",
+  "schema_version": "2.0.0",
+  "pattern": "SMARTDOC_FORMAT_ERROR",
+  "name": "SmartDoc Rich Text Format Requirement",
+  "safetyLevel": "RED",
+  "severity": "BLOCKING",
+  "category": "silent_failure",
+
+  "triggers": [
+    {
+      "condition": "record_operation",
+      "endpoint_match": "/records/",
+      "parameter_check": {
+        "path": "payload.richtextareafield",
+        "operator": "exists",
+        "value_type": "string"
+      }
+    }
+  ],
+
+  "failureModes": [
+    {
+      "description": "Providing plain strings to richtextareafield causes silent failure - API accepts request but doesn't save content",
+      "prevention": "Use complete SmartDoc structure with data, html, and preview components",
+      "impact": "Field appears empty in SmartSuite UI despite API returning 200 OK. Data loss with no error indication."
+    }
+  ],
+
+  "validationRules": [
+    {
+      "rule_type": "property_check",
+      "condition": "richtextareafield is string OR missing data/html/preview keys",
+      "action": "BLOCK",
+      "message": "BLOCKING: Rich text fields require SmartDoc structure: {data, html, preview}. Plain strings fail silently - API accepts but doesn't save."
+    }
+  ],
+
+  "correction": {
+    "description": "Convert plain text to SmartDoc structure with all three required components",
+    "workflow": [
+      "1. Identify richtextareafield values in payload",
+      "2. Wrap text content in SmartDoc data structure",
+      "3. Generate HTML representation",
+      "4. Create plain text preview"
+    ],
+    "example": {
+      "wrong": {
+        "description": "This is plain text"
+      },
+      "correct": {
+        "description": {
+          "data": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "This is plain text"
+                  }
+                ]
+              }
+            ]
+          },
+          "html": "<p>This is plain text</p>",
+          "preview": "This is plain text"
+        }
+      }
+    },
+    "requirements": [
+      "MUST include data object with type:'doc' and content array",
+      "MUST include html string with HTML representation",
+      "MUST include preview string with plain text",
+      "All three components required, cannot omit any"
+    ]
+  },
+
+  "evidence": {
+    "incident_date": "2025-01",
+    "production_validated": true,
+    "source": "CRITICAL-FORMATS-TRUTH.md:13-67"
+  },
+
+  "metadata": {
+    "last_verified": "2025-10-06",
+    "silent_failure": true
+  }
+}

@@ -25,7 +25,6 @@ import {
   executeRecordTool,
   executeSchemaTool,
   executeDiscoverTool,
-  executeUndoTool,
   executeIntelligentTool,
   executeFieldCreateTool,
   executeFieldUpdateTool,
@@ -178,25 +177,25 @@ export function createServer(): Server {
 /**
  * Get registered tool schemas
  * CONTRACT: SERVER-005, SERVER-006 - Tool registration with MCP-compliant schemas
- * Phase 2G Revised: Direct 6-tool architecture (architectural amendment 44373ac)
- * Returns all 6 tools without facade layer filtering
+ * Phase 2J: Direct 7-tool architecture (4 core + intelligent + 2 field management)
+ * Note: undo removed - SmartSuite API has no undo/rollback capability
  */
 export function getRegisteredTools(): ReturnType<typeof getToolSchemas> {
-  // Phase 2G Revised: Register all 6 tools directly
-  // smartsuite_query, smartsuite_record, smartsuite_schema, smartsuite_discover, smartsuite_undo, smartsuite_intelligent
+  // Phase 2J: Register all 7 tools directly
+  // smartsuite_query, smartsuite_record, smartsuite_schema, smartsuite_discover, smartsuite_intelligent, smartsuite_field_create, smartsuite_field_update
   return getToolSchemas();
 }
 
 /**
  * Execute tool by name
  * CONTRACT: SERVER-007 - Tool handler connection
- * Phase 2G Revised: Route all 6 tools to their respective handlers
+ * Phase 2J: Route all 7 tools to their respective handlers
  */
 export function executeToolByName(
   name: string,
   params: Record<string, unknown>,
 ): Promise<unknown> {
-  // Phase 2J: Direct routing to all 8 tool handlers (6 core + 2 field tools)
+  // Phase 2J: Direct routing to all 7 tool handlers (4 core + intelligent + 2 field tools)
   switch (name) {
     case 'smartsuite_query':
       return executeQueryTool(params);
@@ -210,9 +209,6 @@ export function executeToolByName(
     case 'smartsuite_discover':
       return executeDiscoverTool(params);
 
-    case 'smartsuite_undo':
-      return executeUndoTool(params);
-
     case 'smartsuite_intelligent':
       return executeIntelligentTool(params);
 
@@ -224,7 +220,7 @@ export function executeToolByName(
 
     default:
       return Promise.reject(new Error(
-        `Unknown tool: ${name}. Registered tools: smartsuite_query, smartsuite_record, smartsuite_schema, smartsuite_discover, smartsuite_undo, smartsuite_intelligent, smartsuite_field_create, smartsuite_field_update`,
+        `Unknown tool: ${name}. Registered tools: smartsuite_query, smartsuite_record, smartsuite_schema, smartsuite_discover, smartsuite_intelligent, smartsuite_field_create, smartsuite_field_update`,
       ));
   }
 }

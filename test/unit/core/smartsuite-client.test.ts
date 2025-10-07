@@ -929,7 +929,7 @@ describe('SmartSuiteClient - Authentication (AUTH-001, AUTH-002)', () => {
         .mockResolvedValueOnce({
           ok: true,
           status: 200,
-          json: async () => ({ count: 42 }),
+          json: async () => ({ total: 42 }),
         });
       global.fetch = mockFetch as unknown as typeof fetch;
 
@@ -963,7 +963,7 @@ describe('SmartSuiteClient - Authentication (AUTH-001, AUTH-002)', () => {
         .mockResolvedValueOnce({
           ok: true,
           status: 200,
-          json: async () => ({ count: 42 }),
+          json: async () => ({ total: 42 }),
         });
       global.fetch = mockFetch as unknown as typeof fetch;
 

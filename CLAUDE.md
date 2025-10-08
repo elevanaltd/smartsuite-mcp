@@ -219,6 +219,95 @@ SMARTSUITE_CRITICAL::[
     FILTER_MISMATCH→"is"_vs_"has_any_of"[linked_records]
   ]
 
+  FILTERING_PATTERNS::CRITICAL[
+    MANDATE::ALWAYS_USE_STRUCTURED_FORMAT[not_simple_objects]
+
+    EAV_CODE_LOOKUP_PATTERN::[
+      CORRECT::{
+        "operation": "search",
+        "tableId": "table_id",
+        "filters": {
+          "operator": "and",
+          "fields": [
+            {"field": "eavcode", "comparison": "is", "value": "EAV001"},
+            {"field": "status", "comparison": "is", "value": "active"}
+          ]
+        }
+      }
+
+      WRONG::{"eavcode": "EAV001"}→API_400_BAD_REQUEST
+      WRONG::{"status": "active"}→API_400_BAD_REQUEST
+
+      REASON::SmartSuite_API_requires_structured_filter_object_with_operator_and_fields_array
+    ]
+
+    FIELD_TYPE_OPERATORS::[
+      TEXT_FIELDS["eavcode","title","description","project_name"]::
+        operators→is|is_not|contains|not_contains|is_empty|is_not_empty
+        example→{"field": "eavcode", "comparison": "is", "value": "EAV001"}
+
+      LINKED_RECORDS["project_id","task_links"]::
+        operators→has_any_of|has_all_of|has_none_of
+        CRITICAL::NEVER_USE_"is"_operator→returns_zero_results_silently
+        example→{"field": "project_id", "comparison": "has_any_of", "value": ["project_uuid"]}
+
+      SELECT_FIELDS["status","priority"]::
+        operators→is|is_not|is_any_of|is_none_of
+        note→use_option_codes_not_display_labels
+        example→{"field": "status", "comparison": "is", "value": "active"}
+
+      NUMBER_FIELDS["cost","hours"]::
+        operators→is|is_not|greater_than|less_than|between|not_between
+        example→{"field": "cost", "comparison": "greater_than", "value": 1000}
+
+      DATE_FIELDS["due_date","created_date"]::
+        operators→is|is_not|is_before|is_after|is_between|is_empty|is_not_empty
+        example→{"field": "due_date", "comparison": "is_after", "value": "2025-01-01"}
+    ]
+
+    COMPLEX_FILTERING::[
+      MULTIPLE_CONDITIONS::{
+        "operator": "and",
+        "fields": [
+          {"field": "eavcode", "comparison": "contains", "value": "EAV"},
+          {"field": "status", "comparison": "is", "value": "active"},
+          {"field": "project_id", "comparison": "has_any_of", "value": ["uuid1", "uuid2"]}
+        ]
+      }
+
+      OR_LOGIC::{
+        "operator": "or",
+        "fields": [
+          {"field": "priority", "comparison": "is", "value": "urgent"},
+          {"field": "status", "comparison": "is", "value": "overdue"}
+        ]
+      }
+
+      NESTED_LOGIC::{
+        "operator": "or",
+        "fields": [
+          {
+            "operator": "and",
+            "fields": [
+              {"field": "status", "comparison": "is", "value": "active"},
+              {"field": "priority", "comparison": "is", "value": "high"}
+            ]
+          },
+          {"field": "urgent_flag", "comparison": "is", "value": true}
+        ]
+      }
+    ]
+
+    REFERENCE_DOCUMENTATION::[
+      COMPLETE_EXAMPLES::config/knowledge/patterns/green/filtering.json
+      SILENT_FAILURES::config/knowledge/patterns/red/filter-operators.json[RED_004]
+      OPERATOR_MATRIX::config/knowledge/rules/operator-validation.json
+    ]
+
+    PRODUCTION_VALIDATED::EAV_workflows_filtering_by_code_works_with_structured_format
+    GAP_007_RESOLUTION::Documentation_over_code_transformation[constitutional_MIP_compliance]
+  ]
+
   TABLES::[
     PRIMARY→68a8ff5237fde0bf797c05b3[production]
     TEST→68ab34b30b1e05e11a8ba87f[safe_playground]
